@@ -31,10 +31,10 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
 
         return listOf(
             Preference.PreferenceGroup(
-                title = stringResource(MR.strings.pref_enhancement_komga_reader),
+                title = stringResource(MR.strings.pref_enhancement_comic_cache),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.ListPreference(
-                        preference = preferences.komgaPageCacheSizeMb,
+                        preference = preferences.comicPageCacheSizeMb,
                         entries = persistentMapOf(
                             KohariaEnhancementPreferences.AUTO_PAGE_CACHE_SIZE_MB to
                                 stringResource(MR.strings.label_automatic),
@@ -51,6 +51,11 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                             true
                         },
                     ),
+                ),
+            ),
+            Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_komga_reader),
+                preferenceItems = persistentListOf(
                     Preference.PreferenceItem.ListPreference(
                         preference = preferences.komgaPrefetchNextPages,
                         entries = persistentMapOf(

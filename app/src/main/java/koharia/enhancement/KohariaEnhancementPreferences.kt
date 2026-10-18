@@ -6,8 +6,8 @@ import tachiyomi.core.common.preference.PreferenceStore
 class KohariaEnhancementPreferences(
     preferenceStore: PreferenceStore,
 ) {
-    val komgaPageCacheSizeMb: Preference<Int> =
-        preferenceStore.getInt("custom_komga_page_cache_mb", DEFAULT_PAGE_CACHE_SIZE_MB)
+    val comicPageCacheSizeMb: Preference<Int> =
+        preferenceStore.getInt("custom_comic_page_cache_mb", DEFAULT_PAGE_CACHE_SIZE_MB)
 
     val komgaPrefetchNextPages: Preference<Int> =
         preferenceStore.getInt("custom_komga_prefetch_next", DEFAULT_PREFETCH_NEXT)

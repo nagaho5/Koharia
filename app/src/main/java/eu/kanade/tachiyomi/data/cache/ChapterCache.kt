@@ -86,7 +86,7 @@ class ChapterCache(
 
     private fun calculateCacheSize(directory: File): Long {
         val configuredMb = enhancementPreferences
-            ?.komgaPageCacheSizeMb
+            ?.comicPageCacheSizeMb
             ?.get()
             ?.let(KohariaEnhancementPreferences::normalizedPageCacheSizeMb)
         if (configuredMb != null && configuredMb != KohariaEnhancementPreferences.AUTO_PAGE_CACHE_SIZE_MB) {
