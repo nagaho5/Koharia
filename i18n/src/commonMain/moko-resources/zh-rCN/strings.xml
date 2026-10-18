@@ -2194,7 +2194,7 @@
     <string name="pref_enhancement_prefetch_previous_summary">当前页之前保留的预加载页数；跳页时会围绕新位置重建窗口。</string>
     <string name="pref_enhancement_controls">操作与翻页</string>
     <string name="pref_enhancement_rapid_tap">快速连续点击翻页</string>
-    <string name="pref_enhancement_rapid_tap_summary">每次短按都立即计为一次翻页；启用时双击放大自动停用，双指缩放和拖动不变。</string>
+    <string name="pref_enhancement_rapid_tap_summary">分页漫画阅读器中，每次短按都立即计为一次翻页；启用时双击放大自动停用，双指缩放和拖动不变。</string>
     <string name="pref_enhancement_about">关于此定制版</string>
     <string name="pref_enhancement_build_identity">构建标识</string>
 </resources>

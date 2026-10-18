@@ -2333,7 +2333,7 @@
     <string name="pref_enhancement_prefetch_previous_summary">Pages before the current page to retain around the active position. Jumps rebuild the window around the new page.</string>
     <string name="pref_enhancement_controls">Controls and page turns</string>
     <string name="pref_enhancement_rapid_tap">Rapid consecutive tap paging</string>
-    <string name="pref_enhancement_rapid_tap_summary">Each short tap immediately counts as one page turn. Double-tap zoom is disabled while enabled; pinch zoom and dragging remain available.</string>
+    <string name="pref_enhancement_rapid_tap_summary">In the paged comic reader, each short tap immediately counts as one page turn. Double-tap zoom is disabled while enabled; pinch zoom and dragging remain available.</string>
     <string name="pref_enhancement_about">About this custom build</string>
     <string name="pref_enhancement_build_identity">Build identity</string>
 </resources>
