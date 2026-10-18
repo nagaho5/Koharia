@@ -4,10 +4,10 @@ import android.app.Application
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
+import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.epub.font.EpubFontId
 import koharia.epub.settings.EpubLayoutPreferences
 import koharia.epub.settings.EpubReaderPreferences
-import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map

@@ -129,6 +129,7 @@ class PageLoadGateTest {
         assertEquals(emptyList<Int>(), gate.onPagesDisplayed(setOf(2, 3), 20))
         assertEquals(listOf(10, 11), gate.onPagesDisplayed(setOf(8, 9), 20))
     }
+
     @Test
     fun `bidirectional provider window prioritizes following pages while moving forward`() {
         val gate = PageLoadGate(
@@ -170,5 +171,4 @@ class PageLoadGateTest {
         assertEquals(listOf(30, 31, 32, 33, 34, 28, 27, 26), activation.prefetchIndexes)
         assertEquals(emptyList<Int>(), gate.onPageDisplayed(2, 40))
     }
-
 }
