@@ -187,32 +187,36 @@ class KomgaApiSearchTest {
     }
 
     @Test
-    fun `recently read book sort uses progress time in both APIs with stable ties`() {
+    fun `recently read book sort uses progress time in both APIs with stable ties and paging`() {
         val api = apiClient(OkHttpClient())
-        for (ascending in listOf(true, false)) {
-            val expected = listOf(
-                "readProgress.readDate,${if (ascending) "asc" else "desc"}",
-                "id,asc",
-            )
-            val modern = api.searchListRequest(
-                page = 1,
-                query = "",
-                type = KomgaApiClient.SearchType.BOOKS,
-                defaultLibraries = emptySet(),
-                sortIndex = RECENTLY_READ_SORT_INDEX,
-                sortAscending = ascending,
-            )
-            val legacy = api.searchRequest(
-                page = 1,
-                query = "",
-                type = KomgaApiClient.SearchType.BOOKS,
-                defaultLibraries = emptySet(),
-                sortIndex = RECENTLY_READ_SORT_INDEX,
-                sortAscending = ascending,
-            )
+        for (page in listOf(1, 2)) {
+            for (ascending in listOf(true, false)) {
+                val expected = listOf(
+                    "readProgress.readDate,${if (ascending) "asc" else "desc"}",
+                    "id,asc",
+                )
+                val modern = api.searchListRequest(
+                    page = page,
+                    query = "",
+                    type = KomgaApiClient.SearchType.BOOKS,
+                    defaultLibraries = emptySet(),
+                    sortIndex = RECENTLY_READ_SORT_INDEX,
+                    sortAscending = ascending,
+                )
+                val legacy = api.searchRequest(
+                    page = page,
+                    query = "",
+                    type = KomgaApiClient.SearchType.BOOKS,
+                    defaultLibraries = emptySet(),
+                    sortIndex = RECENTLY_READ_SORT_INDEX,
+                    sortAscending = ascending,
+                )
 
-            assertEquals(expected, modern.url.queryParameterValues("sort"))
-            assertEquals(expected, legacy.url.queryParameterValues("sort"))
+                assertEquals((page - 1).toString(), modern.url.queryParameter("page"))
+                assertEquals((page - 1).toString(), legacy.url.queryParameter("page"))
+                assertEquals(expected, modern.url.queryParameterValues("sort"))
+                assertEquals(expected, legacy.url.queryParameterValues("sort"))
+            }
         }
     }
 
