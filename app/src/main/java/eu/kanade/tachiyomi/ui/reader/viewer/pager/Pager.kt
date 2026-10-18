@@ -97,6 +97,7 @@ open class Pager(
     private var rapidTapEligible = false
     private var rapidTapDownX = 0f
     private var rapidTapDownY = 0f
+    private var rapidTapDownTime = 0L
 
     private var pageTurnSwipeCandidate = false
     private var pageTurnSwipeConsumed = false
@@ -136,6 +137,7 @@ open class Pager(
                 rapidTapEligible = true
                 rapidTapDownX = ev.x
                 rapidTapDownY = ev.y
+                rapidTapDownTime = ev.eventTime
             }
             MotionEvent.ACTION_POINTER_DOWN -> rapidTapEligible = false
             MotionEvent.ACTION_MOVE -> {
@@ -144,7 +146,8 @@ open class Pager(
                 }
             }
             MotionEvent.ACTION_UP -> {
-                if (rapidTapEligible) {
+                val isShortTap = ev.eventTime - rapidTapDownTime < ViewConfiguration.getLongPressTimeout()
+                if (rapidTapEligible && isShortTap) {
                     tapListener?.invoke(ev)
                 }
                 rapidTapEligible = false

@@ -1,6 +1,9 @@
 name: Custom Preview APK
 
 on:
+  push:
+    branches:
+      - feature/koharia-enhancements-v070
   workflow_dispatch:
 
 permissions:
@@ -24,7 +27,23 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
+      - name: Check fixed signing availability
+        id: signing
+        env:
+          SIGNING_KEY: ${{ secrets.KOHARIA_CUSTOM_SIGNING_KEY }}
+          ALIAS: ${{ secrets.KOHARIA_CUSTOM_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_PASSWORD }}
+        run: |
+          if [[ -n "$SIGNING_KEY" && -n "$ALIAS" && -n "$KEY_STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Fixed signing secrets are not configured yet; signed custom APK steps will be skipped."
+          fi
+
       - name: Prepare fixed signing key
+        if: steps.signing.outputs.ready == 'true'
         env:
           SIGNING_KEY: ${{ secrets.KOHARIA_CUSTOM_SIGNING_KEY }}
           ALIAS: ${{ secrets.KOHARIA_CUSTOM_ALIAS }}
@@ -50,15 +69,18 @@ jobs:
           } > keystore.properties
 
       - name: Verify
+        if: steps.signing.outputs.ready == 'true'
         run: |
           ./gradlew spotlessCheck
           ./gradlew :app:testDebugUnitTest --tests eu.kanade.tachiyomi.ui.reader.loader.PageLoadGateTest
           ./gradlew :app:compileDebugKotlin
 
       - name: Build fixed-signature preview
+        if: steps.signing.outputs.ready == 'true'
         run: ./gradlew assemblePreview -PcustomPreviewSigning=true
 
       - name: Upload arm64 APK
+        if: steps.signing.outputs.ready == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: koharia-custom-preview-arm64-${{ github.sha }}
