@@ -82,6 +82,7 @@ import koharia.lanraragi.ui.LanraragiArchivePreviewScreen
 import koharia.source.komga.KomgaLibraryClassificationManager
 import koharia.source.komga.KomgaLibraryScope
 import koharia.source.komga.KomgaServerSettingsScreen
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.SeriesSort
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.channels.Channel
@@ -309,8 +310,8 @@ data class KomgaLibraryScreen(
                                     ConnectionSearchSortOption(
                                         value = index,
                                         label = komgaFilterLabel(label),
-                                        supportsDirection = index in 1..3,
-                                        defaultAscending = index !in 2..3,
+                                        supportsDirection = index in 1..3 || index == RECENTLY_READ_SORT_INDEX,
+                                        defaultAscending = index !in listOf(2, 3, RECENTLY_READ_SORT_INDEX),
                                     )
                                 }
                             },
