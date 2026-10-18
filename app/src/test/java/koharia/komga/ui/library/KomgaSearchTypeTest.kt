@@ -51,12 +51,12 @@ class KomgaSearchTypeTest {
             ),
         )
 
-        val sort = SeriesSort(Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false))
-        val filters = FilterList(TypeSelect(), sort)
-        filters.selectContentType(TYPE_BOOKS_INDEX)
-        filters.selectContentType(TYPE_SERIES_INDEX)
-        assertEquals(RECENTLY_READ_SORT_INDEX, sort.state?.index)
-        assertFalse(sort.state?.ascending ?: true)
+        for (targetType in listOf(TYPE_SERIES_INDEX, TYPE_READ_LISTS_INDEX, TYPE_ALL_INDEX)) {
+            val sort = SeriesSort(Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false))
+            val filters = FilterList(TypeSelect().apply { state = TYPE_BOOKS_INDEX }, sort)
+            filters.selectContentType(targetType)
+            assertEquals(Filter.Sort.Selection(0, true), sort.state)
+        }
     }
 
     @Test
