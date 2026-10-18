@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
+import koharia.connection.ConnectionBidirectionalPrefetchAdapter
 import koharia.connection.ConnectionPageAdapter
 import koharia.connection.ConnectionPageList
 import koharia.connection.ConnectionPageMetadata
@@ -55,6 +56,7 @@ internal class HttpPageLoader(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val connectionPageAdapter = source as? ConnectionPageAdapter
+    private val bidirectionalPrefetchAdapter = source as? ConnectionBidirectionalPrefetchAdapter
     private val transferMeter = ReaderTransferMeter()
 
     override val bufferingState: StateFlow<ReaderBufferingState> = transferMeter.state
@@ -68,8 +70,8 @@ internal class HttpPageLoader(
         preloadSize = 2,
         prefetchOnActivate = connectionPageAdapter?.pagePrefetchOnActivate == true,
         prefetchPageCount = connectionPageAdapter?.pagePrefetchSize,
-        prefetchPreviousCount = connectionPageAdapter?.pagePrefetchPreviousSize,
-        prefetchNextCount = connectionPageAdapter?.pagePrefetchNextSize,
+        prefetchPreviousCount = bidirectionalPrefetchAdapter?.pagePrefetchPreviousSize,
+        prefetchNextCount = bidirectionalPrefetchAdapter?.pagePrefetchNextSize,
     )
     private val schedulerLock = Any()
     private val scheduledPages = Collections.newSetFromMap(IdentityHashMap<ReaderPage, Boolean>())

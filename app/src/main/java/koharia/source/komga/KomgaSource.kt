@@ -22,6 +22,7 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.sourcePreferences
 import koharia.connection.ConnectionAccountAdapter
 import koharia.connection.ConnectionAddressRouter
+import koharia.connection.ConnectionBidirectionalPrefetchAdapter
 import koharia.connection.ConnectionBrowseAdapter
 import koharia.connection.ConnectionChapterTitleAdapter
 import koharia.connection.ConnectionDownloadStorageAdapter
@@ -98,6 +99,7 @@ class KomgaSource(
     ConnectionBrowseAdapter,
     koharia.connection.ConnectionEntryOpeningAdapter,
     ConnectionPageAdapter,
+    ConnectionBidirectionalPrefetchAdapter,
     ConnectionAccountAdapter,
     ConnectionMangaBehaviorAdapter,
     ConnectionHealthAdapter,

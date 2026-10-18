@@ -50,14 +50,6 @@ interface ConnectionPageAdapter {
     val pagePrefetchSize: Int?
         get() = null
 
-    /** Optional number of lower-index pages retained around the active spread. */
-    val pagePrefetchPreviousSize: Int?
-        get() = null
-
-    /** Optional number of higher-index pages retained around the active spread. */
-    val pagePrefetchNextSize: Int?
-        get() = null
-
     /** Server page numbers must also identify pages in downloaded copies. */
     val preserveDownloadPageBoundaries: Boolean
         get() = false
@@ -65,6 +57,12 @@ interface ConnectionPageAdapter {
     suspend fun getConnectionPageList(chapter: SChapter, forceNetwork: Boolean): ConnectionPageList
 
     fun decoratePageImageUrls(pages: List<Page>, chapterMemo: JsonObject): List<Page> = pages
+}
+
+/** Optional provider-specific two-sided prefetch window around the active spread. */
+interface ConnectionBidirectionalPrefetchAdapter {
+    val pagePrefetchPreviousSize: Int
+    val pagePrefetchNextSize: Int
 }
 
 /** Lets persisted catalogues distinguish opening cached details from an explicit refresh. */
