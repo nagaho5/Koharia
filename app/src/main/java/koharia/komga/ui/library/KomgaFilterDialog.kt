@@ -332,6 +332,11 @@ internal fun FilterList.selectContentType(type: Int) {
 }
 
 private fun FilterList.clearFiltersHiddenFor(type: Int) {
+    filterIsInstance<SeriesSort>().firstOrNull()?.let {
+        if (it.state?.index !in availableKomgaSortIndices(type)) {
+            it.state = Filter.Sort.Selection(0, true)
+        }
+    }
     if (type == TYPE_SERIES_INDEX) return
 
     filterIsInstance<CollectionSelect>().firstOrNull()?.state = 0
@@ -343,11 +348,6 @@ private fun FilterList.clearFiltersHiddenFor(type: Int) {
             type == TYPE_READ_LISTS_INDEX && filter is AuthorGroup -> filter.clearSelections()
             (type == TYPE_BOOKS_INDEX || type == TYPE_ALL_INDEX) && filter is UriMultiSelectFilter &&
                 filter !is LibraryFilter && filter.name != "Tags" -> filter.clearSelections()
-        }
-    }
-    if (type == TYPE_ALL_INDEX) {
-        filterIsInstance<SeriesSort>().firstOrNull()?.let {
-            if (it.state?.index !in availableKomgaSortIndices(type)) it.state = Filter.Sort.Selection(0, true)
         }
     }
 }
