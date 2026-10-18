@@ -50,6 +50,14 @@ interface ConnectionPageAdapter {
     val pagePrefetchSize: Int?
         get() = null
 
+    /** Optional number of lower-index pages retained around the active spread. */
+    val pagePrefetchPreviousSize: Int?
+        get() = null
+
+    /** Optional number of higher-index pages retained around the active spread. */
+    val pagePrefetchNextSize: Int?
+        get() = null
+
     /** Server page numbers must also identify pages in downloaded copies. */
     val preserveDownloadPageBoundaries: Boolean
         get() = false

@@ -28,6 +28,7 @@ import koharia.connection.ConnectionContentScopeController
 import koharia.connection.ConnectionPreferences
 import koharia.connection.ConnectionProfileManager
 import koharia.connection.ConnectionRegistry
+import koharia.connection.SharedAppPreferences
 import koharia.cover.CustomCoverStore
 import koharia.epub.cache.EpubCacheManager
 import koharia.epub.cache.EpubCachePreferences
@@ -255,7 +256,7 @@ class AppModule(val app: Application) : InjektModule {
             ProtoBuf
         }
 
-        addSingletonFactory { ChapterCache(app, get()) }
+        addSingletonFactory { ChapterCache(app, get(), get<SharedAppPreferences>().enhancementPreferences()) }
         addSingletonFactory { CoverCache(app) }
         addSingletonFactory { CustomCoverStore(app, get(), get(), get(), get()) }
         addSingletonFactory { EpubCachePreferences(get()) }

@@ -6,6 +6,8 @@ internal class PageLoadGate(
     private val preloadSize: Int = 2,
     private val prefetchOnActivate: Boolean = false,
     private val prefetchPageCount: Int? = null,
+    private val prefetchPreviousCount: Int? = null,
+    private val prefetchNextCount: Int? = null,
 ) {
     private var activePageIndexes: Set<Int> = emptySet()
     private var logicalPageIndex: Int? = null
@@ -65,6 +67,27 @@ internal class PageLoadGate(
 
     private fun prefetchIndexes(pageCount: Int): List<Int> {
         if (pageCount <= 0) return emptyList()
+
+        if (prefetchPreviousCount != null || prefetchNextCount != null) {
+            val previousCount = prefetchPreviousCount?.coerceAtLeast(0) ?: 0
+            val nextCount = prefetchNextCount?.coerceAtLeast(0) ?: 0
+            val previousFirst = (activePageIndexes.minOrNull() ?: return emptyList()) - 1
+            val previousLast = (previousFirst - previousCount + 1).coerceAtLeast(0)
+            val previous = if (previousCount > 0 && previousFirst >= previousLast) {
+                (previousFirst downTo previousLast).toList()
+            } else {
+                emptyList()
+            }
+            val nextFirst = (activePageIndexes.maxOrNull() ?: return emptyList()) + 1
+            val nextLastExclusive = (nextFirst + nextCount).coerceAtMost(pageCount)
+            val next = if (nextCount > 0 && nextFirst < nextLastExclusive) {
+                (nextFirst until nextLastExclusive).toList()
+            } else {
+                emptyList()
+            }
+            return if (prefetchDirection == Direction.FORWARD) next + previous else previous + next
+        }
+
         val logicalSpreadSize = activePageIndexes.size.coerceAtLeast(1)
         val targetSize = prefetchPageCount?.coerceAtLeast(1)
             ?: logicalSpreadSize.coerceAtMost(preloadSize.coerceAtLeast(1))

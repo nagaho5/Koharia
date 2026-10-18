@@ -68,6 +68,8 @@ internal class HttpPageLoader(
         preloadSize = 2,
         prefetchOnActivate = connectionPageAdapter?.pagePrefetchOnActivate == true,
         prefetchPageCount = connectionPageAdapter?.pagePrefetchSize,
+        prefetchPreviousCount = connectionPageAdapter?.pagePrefetchPreviousSize,
+        prefetchNextCount = connectionPageAdapter?.pagePrefetchNextSize,
     )
     private val schedulerLock = Any()
     private val scheduledPages = Collections.newSetFromMap(IdentityHashMap<ReaderPage, Boolean>())

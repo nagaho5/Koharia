@@ -7,6 +7,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import koharia.epub.font.EpubFontId
 import koharia.epub.settings.EpubLayoutPreferences
 import koharia.epub.settings.EpubReaderPreferences
+import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -27,6 +28,7 @@ class SharedAppPreferences(
     )
 
     fun readerPreferences() = ReaderPreferences(store())
+    fun enhancementPreferences() = KohariaEnhancementPreferences(store())
     fun epubReaderPreferences() = EpubReaderPreferences(store())
     fun epubLayoutPreferences() = EpubLayoutPreferences(store())
     fun basePreferences() = BasePreferences(app, store())

@@ -45,6 +45,7 @@ import koharia.connection.ConnectionViewerSettingsAdapter
 import koharia.connection.LibraryConnectionProfile
 import koharia.connection.LibraryContentScope
 import koharia.connection.SharedAppPreferences
+import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.komga.api.KomgaApiClient
 import koharia.komga.api.KomgaSearchCapabilities
 import koharia.komga.api.dto.BookDto
@@ -123,9 +124,18 @@ class KomgaSource(
     override val supportsLatest: Boolean = true
     override val versionId: Int = SOURCE_VERSION
 
-    // PDF pages are rasterized by Komga on demand. Two requests avoid saturating the server's
-    // PDF renderer while still keeping a visible double-page spread responsive.
-    override val pageLoadConcurrency: Int = 2
+    override val pageLoadConcurrency: Int = 3
+    private val enhancementPreferences by lazy {
+        Injekt.get<SharedAppPreferences>().enhancementPreferences()
+    }
+    override val pagePrefetchPreviousSize: Int
+        get() = KohariaEnhancementPreferences.normalizedPrefetchPrevious(
+            enhancementPreferences.komgaPrefetchPreviousPages.get(),
+        )
+    override val pagePrefetchNextSize: Int
+        get() = KohariaEnhancementPreferences.normalizedPrefetchNext(
+            enhancementPreferences.komgaPrefetchNextPages.get(),
+        )
     override val mangaBehavior = MANGA_BEHAVIOR
     override val allowsUnvalidatedNetwork: Boolean = true
     override val rawDownloadClient: OkHttpClient

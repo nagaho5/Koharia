@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.saveTo
 import koharia.connection.ConnectionChapterMetadata
 import koharia.connection.ConnectionPageList
+import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.serialization.json.Json
 import logcat.LogPriority
 import okhttp3.Response
@@ -30,6 +31,7 @@ import java.io.IOException
 class ChapterCache(
     private val context: Context,
     private val json: Json,
+    private val enhancementPreferences: KohariaEnhancementPreferences? = null,
 ) {
 
     data class ImageCacheDiagnostics(
@@ -83,16 +85,23 @@ class ChapterCache(
     }
 
     private fun calculateCacheSize(directory: File): Long {
+        val configuredMb = enhancementPreferences
+            ?.komgaPageCacheSizeMb
+            ?.get()
+            ?.let(KohariaEnhancementPreferences::normalizedPageCacheSizeMb)
+        if (configuredMb != null && configuredMb != KohariaEnhancementPreferences.AUTO_PAGE_CACHE_SIZE_MB) {
+            return configuredMb.toLong() * 1024 * 1024
+        }
+
         return try {
             val stat = android.os.StatFs(directory.absolutePath)
             val totalBytes = stat.blockCountLong * stat.blockSizeLong
             val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
             val minCacheBytes = 100L * 1024 * 1024
             val maxCacheBytes = (totalBytes / 10).coerceAtLeast(minCacheBytes)
-            // 取可用空间的 10% 或总空间的 10% 作为上限，并且设置一个合理的上下限
             (availableBytes * 0.1).toLong().coerceIn(minCacheBytes, maxCacheBytes)
-        } catch (e: Exception) {
-            100L * 1024 * 1024 // 默认 100MB
+        } catch (_: Exception) {
+            PARAMETER_CACHE_SIZE
         }
     }
 
