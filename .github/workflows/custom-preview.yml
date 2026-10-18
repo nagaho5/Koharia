@@ -1,0 +1,67 @@
+name: Custom Preview APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build fixed-signature parallel APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: Prepare fixed signing key
+        env:
+          SIGNING_KEY: ${{ secrets.KOHARIA_CUSTOM_SIGNING_KEY }}
+          ALIAS: ${{ secrets.KOHARIA_CUSTOM_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [[ -n "$SIGNING_KEY" ]] || missing+=("KOHARIA_CUSTOM_SIGNING_KEY")
+          [[ -n "$ALIAS" ]] || missing+=("KOHARIA_CUSTOM_ALIAS")
+          [[ -n "$KEY_STORE_PASSWORD" ]] || missing+=("KOHARIA_CUSTOM_KEY_STORE_PASSWORD")
+          [[ -n "$KEY_PASSWORD" ]] || missing+=("KOHARIA_CUSTOM_KEY_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing required Actions secrets: ${missing[*]}"
+            exit 1
+          fi
+          printf '%s' "$SIGNING_KEY" | base64 --decode > custom-preview.jks
+          {
+            echo "storeFile=custom-preview.jks"
+            echo "storePassword=$KEY_STORE_PASSWORD"
+            echo "keyAlias=$ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Verify
+        run: |
+          ./gradlew spotlessCheck
+          ./gradlew :app:testDebugUnitTest --tests eu.kanade.tachiyomi.ui.reader.loader.PageLoadGateTest
+          ./gradlew :app:compileDebugKotlin
+
+      - name: Build fixed-signature preview
+        run: ./gradlew assemblePreview -PcustomPreviewSigning=true
+
+      - name: Upload arm64 APK
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: koharia-custom-preview-arm64-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 90
+          path: app/build/outputs/apk/preview/*arm64-v8a.apk

@@ -129,4 +129,46 @@ class PageLoadGateTest {
         assertEquals(emptyList<Int>(), gate.onPagesDisplayed(setOf(2, 3), 20))
         assertEquals(listOf(10, 11), gate.onPagesDisplayed(setOf(8, 9), 20))
     }
+    @Test
+    fun `bidirectional provider window prioritizes following pages while moving forward`() {
+        val gate = PageLoadGate(
+            prefetchOnActivate = true,
+            prefetchPreviousCount = 3,
+            prefetchNextCount = 5,
+        )
+
+        val activation = gate.activate(10, 30)
+
+        assertEquals(listOf(11, 12, 13, 14, 15, 9, 8, 7), activation.prefetchIndexes)
+    }
+
+    @Test
+    fun `bidirectional provider window reverses priority while moving backward`() {
+        val gate = PageLoadGate(
+            prefetchOnActivate = true,
+            prefetchPreviousCount = 3,
+            prefetchNextCount = 5,
+        )
+        gate.activate(10, 30)
+
+        val activation = gate.activate(9, 30)
+
+        assertEquals(listOf(8, 7, 6, 10, 11, 12, 13, 14), activation.prefetchIndexes)
+    }
+
+    @Test
+    fun `jump rebuilds bidirectional window around destination`() {
+        val gate = PageLoadGate(
+            prefetchOnActivate = true,
+            prefetchPreviousCount = 3,
+            prefetchNextCount = 5,
+        )
+        gate.activate(2, 40)
+
+        val activation = gate.activate(29, 40)
+
+        assertEquals(listOf(30, 31, 32, 33, 34, 28, 27, 26), activation.prefetchIndexes)
+        assertEquals(emptyList<Int>(), gate.onPageDisplayed(2, 40))
+    }
+
 }

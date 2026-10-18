@@ -36,6 +36,9 @@ val useEInkDeviceFixture = providers.gradleProperty("einkDeviceFixture")
 val useDeviceTestFixture = providers.gradleProperty("deviceTestFixture")
     .map(String::toBoolean)
     .getOrElse(false)
+val useCustomPreviewSigning = providers.gradleProperty("customPreviewSigning")
+    .map(String::toBoolean)
+    .getOrElse(false)
 
 tasks.matching { it.name.startsWith("connected") && it.name.endsWith("AndroidTest") }.configureEach {
     doFirst {
@@ -150,7 +153,14 @@ android {
             applicationIdSuffix = ".debug"
 
             versionNameSuffix = debug.versionNameSuffix
-            signingConfig = debug.signingConfig
+            if (useCustomPreviewSigning) {
+                check(hasReleaseKeystore) {
+                    "Custom preview signing requires keystore.properties and its referenced keystore"
+                }
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = debug.signingConfig
+            }
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
 

@@ -17,6 +17,7 @@ on:
     branches:
       - main
       - feature/komga-recent-read-sort-v070
+      - feature/koharia-enhancements-v070
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
