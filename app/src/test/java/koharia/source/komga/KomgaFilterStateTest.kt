@@ -27,6 +27,27 @@ class KomgaFilterStateTest {
     }
 
     @Test
+    fun `snapshot preserves recently read book sort`() {
+        val original = eu.kanade.tachiyomi.source.model.FilterList(
+            TypeSelect().apply { state = TYPE_BOOKS_INDEX },
+            SeriesSort(
+                eu.kanade.tachiyomi.source.model.Filter.Sort.Selection(
+                    RECENTLY_READ_SORT_INDEX,
+                    false,
+                ),
+            ),
+        )
+
+        val copy = original.snapshotKomgaFilters()
+
+        assertEquals(TYPE_BOOKS_INDEX, copy.filterIsInstance<TypeSelect>().single().state)
+        assertEquals(
+            eu.kanade.tachiyomi.source.model.Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false),
+            copy.filterIsInstance<SeriesSort>().single().state,
+        )
+    }
+
+    @Test
     fun `legacy series selection and sort remain unchanged after version migration`() {
         val legacy = PersistentFilterState(
             selects = mapOf("Search for" to TYPE_SERIES_INDEX),

@@ -2,6 +2,7 @@ package koharia.komga.api
 
 import eu.kanade.tachiyomi.network.HttpException
 import koharia.source.komga.KomgaCachePolicy
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -183,6 +184,70 @@ class KomgaApiSearchTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun `recently read book sort uses progress time in both APIs with stable ties`() {
+        val api = apiClient(OkHttpClient())
+        for (ascending in listOf(true, false)) {
+            val expected = listOf(
+                "readProgress.readDate,${if (ascending) "asc" else "desc"}",
+                "id,asc",
+            )
+            val modern = api.searchListRequest(
+                page = 1,
+                query = "",
+                type = KomgaApiClient.SearchType.BOOKS,
+                defaultLibraries = emptySet(),
+                sortIndex = RECENTLY_READ_SORT_INDEX,
+                sortAscending = ascending,
+            )
+            val legacy = api.searchRequest(
+                page = 1,
+                query = "",
+                type = KomgaApiClient.SearchType.BOOKS,
+                defaultLibraries = emptySet(),
+                sortIndex = RECENTLY_READ_SORT_INDEX,
+                sortAscending = ascending,
+            )
+
+            assertEquals(expected, modern.url.queryParameterValues("sort"))
+            assertEquals(expected, legacy.url.queryParameterValues("sort"))
+        }
+    }
+
+    @Test
+    fun `recently read sort is not sent for non book resources`() {
+        val api = apiClient(OkHttpClient())
+
+        val seriesModern = api.searchListRequest(
+            page = 1,
+            query = "",
+            type = KomgaApiClient.SearchType.SERIES,
+            defaultLibraries = emptySet(),
+            sortIndex = RECENTLY_READ_SORT_INDEX,
+            sortAscending = false,
+        )
+        val seriesLegacy = api.searchRequest(
+            page = 1,
+            query = "",
+            type = KomgaApiClient.SearchType.SERIES,
+            defaultLibraries = emptySet(),
+            sortIndex = RECENTLY_READ_SORT_INDEX,
+            sortAscending = false,
+        )
+        val readListLegacy = api.searchRequest(
+            page = 1,
+            query = "",
+            type = KomgaApiClient.SearchType.READ_LISTS,
+            defaultLibraries = emptySet(),
+            sortIndex = RECENTLY_READ_SORT_INDEX,
+            sortAscending = false,
+        )
+
+        assertTrue(seriesModern.url.queryParameterValues("sort").isEmpty())
+        assertTrue(seriesLegacy.url.queryParameterValues("sort").isEmpty())
+        assertTrue(readListLegacy.url.queryParameterValues("sort").isEmpty())
     }
 
     @Test

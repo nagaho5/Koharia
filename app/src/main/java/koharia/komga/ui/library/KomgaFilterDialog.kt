@@ -26,6 +26,7 @@ import koharia.source.komga.AuthorGroup
 import koharia.source.komga.CollectionSelect
 import koharia.source.komga.LibraryFilter
 import koharia.source.komga.OneshotFilter
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.ReadingStateGroup
 import koharia.source.komga.SeriesSort
 import koharia.source.komga.TYPE_ALL_INDEX
@@ -177,15 +178,7 @@ private fun FilterItem(filter: Filter<*>, filters: FilterList, onUpdate: () -> U
                             label = komgaFilterLabel(item),
                             sortDescending = sortAscending?.not(),
                             onClick = {
-                                val ascending = if (index == filter.state?.index) {
-                                    !filter.state!!.ascending
-                                } else {
-                                    filter.state?.ascending ?: true
-                                }
-                                filter.state = Filter.Sort.Selection(
-                                    index = index,
-                                    ascending = ascending,
-                                )
+                                filter.state = nextKomgaSortSelection(filter.state, index)
                                 onUpdate()
                             },
                         )
@@ -221,6 +214,7 @@ internal fun komgaFilterLabel(label: String): String {
         "Date added" -> stringResource(MR.strings.komga_filter_sort_date_added)
         "Date updated" -> stringResource(MR.strings.komga_filter_sort_date_updated)
         "Random" -> stringResource(MR.strings.action_sort_random)
+        "Recently read" -> stringResource(MR.strings.komga_filter_sort_recently_read)
         "Unread" -> stringResource(MR.strings.unread)
         "In Progress" -> stringResource(MR.strings.komga_filter_in_progress)
         "Read" -> stringResource(MR.strings.komga_filter_read)
@@ -311,8 +305,23 @@ private fun Filter<*>.isAllFilter(): Boolean {
         this is Filter.Separator
 }
 
-internal fun availableKomgaSortIndices(type: Int): List<Int> =
-    if (type == TYPE_ALL_INDEX) listOf(0, 2, 3) else listOf(0, 1, 2, 3, 4)
+internal fun availableKomgaSortIndices(type: Int): List<Int> = when (type) {
+    TYPE_ALL_INDEX -> listOf(0, 2, 3)
+    TYPE_BOOKS_INDEX -> listOf(0, 1, 2, 3, 4, RECENTLY_READ_SORT_INDEX)
+    else -> listOf(0, 1, 2, 3, 4)
+}
+
+internal fun nextKomgaSortSelection(
+    current: Filter.Sort.Selection?,
+    index: Int,
+): Filter.Sort.Selection {
+    val ascending = when {
+        index == current?.index -> !current.ascending
+        index == RECENTLY_READ_SORT_INDEX -> false
+        else -> current?.ascending ?: true
+    }
+    return Filter.Sort.Selection(index, ascending)
+}
 
 private fun FilterList.selectedContentType(): Int =
     filterIsInstance<TypeSelect>().firstOrNull()?.state ?: TYPE_ALL_INDEX

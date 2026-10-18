@@ -11,6 +11,7 @@ import koharia.komga.api.dto.CollectionDto
 import koharia.komga.api.dto.LibraryDto
 import koharia.komga.api.dto.PageWrapperDto
 import koharia.source.komga.KomgaCachePolicy
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.komgaCachePolicy
 import koharia.source.komga.komgaProgressSync
 import kotlinx.serialization.Serializable
@@ -122,21 +123,14 @@ class KomgaApiClient(
         }
         oneshot?.let { url.addQueryParameter("oneshot", it.toString()) }
 
-        val sortCriteria = when (sortIndex) {
-            0 -> "relevance".takeIf { query.isNotBlank() }
-            1 -> type.alphabeticalSortField()
-            2 -> "createdDate"
-            3 -> "lastModifiedDate"
-            4 -> "random"
-            else -> null
-        }?.let {
+        val sortCriteria = type.sortField(sortIndex, query)?.let {
             "$it,${if (sortAscending) "asc" else "desc"}"
         }
         if (sortCriteria != null) {
             url.addQueryParameter("sort", sortCriteria)
         }
 
-        if (sortIndex in 2..3) url.addQueryParameter("sort", "id,asc")
+        if (type.needsStableIdSort(sortIndex)) url.addQueryParameter("sort", "id,asc")
 
         return GET(url.build(), headers)
             .newBuilder()
@@ -182,16 +176,10 @@ class KomgaApiClient(
         val url = "$baseUrl/api/v1/${type.pathSegment}/list".toHttpUrl().newBuilder()
             .addQueryParameter("page", (page - 1).toString())
             .addQueryParameter("size", SEARCH_PAGE_SIZE.toString())
-        val sortCriteria = when (sortIndex) {
-            0 -> "relevance".takeIf { query.isNotBlank() }
-            1 -> type.alphabeticalSortField()
-            2 -> "createdDate"
-            3 -> "lastModifiedDate"
-            4 -> "random"
-            else -> null
-        }?.let { "$it,${if (sortAscending) "asc" else "desc"}" }
+        val sortCriteria = type.sortField(sortIndex, query)
+            ?.let { "$it,${if (sortAscending) "asc" else "desc"}" }
         sortCriteria?.let { url.addQueryParameter("sort", it) }
-        if (sortIndex in 2..3) url.addQueryParameter("sort", "id,asc")
+        if (type.needsStableIdSort(sortIndex)) url.addQueryParameter("sort", "id,asc")
 
         return POST(
             url = url.build().toString(),
@@ -423,6 +411,19 @@ class KomgaApiClient(
             READ_LISTS -> "name"
             ALL -> error("All searches only support relevance sorting")
         }
+
+        fun sortField(sortIndex: Int, query: String): String? = when (sortIndex) {
+            0 -> "relevance".takeIf { query.isNotBlank() }
+            1 -> alphabeticalSortField()
+            2 -> "createdDate"
+            3 -> "lastModifiedDate"
+            4 -> "random"
+            RECENTLY_READ_SORT_INDEX -> "readProgress.readDate".takeIf { this == BOOKS }
+            else -> null
+        }
+
+        fun needsStableIdSort(sortIndex: Int): Boolean =
+            sortIndex in 2..3 || (this == BOOKS && sortIndex == RECENTLY_READ_SORT_INDEX)
     }
 
     companion object {

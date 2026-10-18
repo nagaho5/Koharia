@@ -157,6 +157,7 @@
     <string name="komga_filter_sort_alphabetically">名称</string>
     <string name="komga_filter_sort_date_added">添加时间</string>
     <string name="komga_filter_sort_date_updated">更新时间</string>
+    <string name="komga_filter_sort_recently_read">最近阅读</string>
     <string name="komga_filter_in_progress">继续阅读</string>
     <string name="komga_filter_read">已读</string>
     <string name="komga_filter_oneshot">单行本</string>

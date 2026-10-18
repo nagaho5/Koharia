@@ -4,8 +4,11 @@ import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import koharia.source.komga.CollectionFilterEntry
 import koharia.source.komga.CollectionSelect
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.SeriesSort
 import koharia.source.komga.TYPE_ALL_INDEX
+import koharia.source.komga.TYPE_BOOKS_INDEX
+import koharia.source.komga.TYPE_READ_LISTS_INDEX
 import koharia.source.komga.TYPE_SERIES_INDEX
 import koharia.source.komga.TypeSelect
 import koharia.source.komga.UriMultiSelectFilter
@@ -27,6 +30,33 @@ class KomgaSearchTypeTest {
             assertEquals(if (index in listOf(0, 2, 3)) index else 0, sort.state?.index)
             assertEquals(index !in listOf(0, 2, 3), sort.state?.ascending)
         }
+    }
+
+    @Test
+    fun `recently read sort is available only for single books and starts newest first`() {
+        assertTrue(RECENTLY_READ_SORT_INDEX in availableKomgaSortIndices(TYPE_BOOKS_INDEX))
+        assertFalse(RECENTLY_READ_SORT_INDEX in availableKomgaSortIndices(TYPE_SERIES_INDEX))
+        assertFalse(RECENTLY_READ_SORT_INDEX in availableKomgaSortIndices(TYPE_READ_LISTS_INDEX))
+        assertFalse(RECENTLY_READ_SORT_INDEX in availableKomgaSortIndices(TYPE_ALL_INDEX))
+
+        assertEquals(
+            Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false),
+            nextKomgaSortSelection(Filter.Sort.Selection(1, true), RECENTLY_READ_SORT_INDEX),
+        )
+        assertEquals(
+            Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, true),
+            nextKomgaSortSelection(
+                Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false),
+                RECENTLY_READ_SORT_INDEX,
+            ),
+        )
+
+        val sort = SeriesSort(Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false))
+        val filters = FilterList(TypeSelect(), sort)
+        filters.selectContentType(TYPE_BOOKS_INDEX)
+        filters.selectContentType(TYPE_SERIES_INDEX)
+        assertEquals(RECENTLY_READ_SORT_INDEX, sort.state?.index)
+        assertFalse(sort.state?.ascending ?: true)
     }
 
     @Test

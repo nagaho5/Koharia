@@ -20,7 +20,7 @@ class TypeSelect :
 class SeriesSort(selection: Selection? = null) :
     Filter.Sort(
         "Sort",
-        arrayOf("Relevance", "Alphabetically", "Date added", "Date updated", "Random"),
+        arrayOf("Relevance", "Alphabetically", "Date added", "Date updated", "Random", "Recently read"),
         selection ?: Selection(0, true),
     )
 
@@ -82,6 +82,7 @@ internal const val TYPE_SERIES_INDEX = 0
 internal const val TYPE_READ_LISTS_INDEX = 1
 internal const val TYPE_BOOKS_INDEX = 2
 internal const val TYPE_ALL_INDEX = 3
+internal const val RECENTLY_READ_SORT_INDEX = 5
 
 /** Copy the current options as well as their selections, including options known only offline. */
 internal fun FilterList.snapshotKomgaFilters(): FilterList = FilterList(
