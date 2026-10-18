@@ -146,7 +146,8 @@ open class Pager(
                 }
             }
             MotionEvent.ACTION_UP -> {
-                val isShortTap = ev.eventTime - rapidTapDownTime < ViewConfiguration.getLongPressTimeout()
+                val isShortTap =
+                    ev.eventTime - rapidTapDownTime < ViewConfiguration.getLongPressTimeout().toLong()
                 if (rapidTapEligible && isShortTap) {
                     tapListener?.invoke(ev)
                 }

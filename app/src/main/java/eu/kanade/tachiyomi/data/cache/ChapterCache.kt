@@ -88,7 +88,7 @@ class ChapterCache(
         val configuredMb = enhancementPreferences
             ?.comicPageCacheSizeMb
             ?.get()
-            ?.let(KohariaEnhancementPreferences::normalizedPageCacheSizeMb)
+            ?.let { KohariaEnhancementPreferences.normalizedPageCacheSizeMb(it) }
         if (configuredMb != null && configuredMb != KohariaEnhancementPreferences.AUTO_PAGE_CACHE_SIZE_MB) {
             return configuredMb.toLong() * 1024 * 1024
         }
