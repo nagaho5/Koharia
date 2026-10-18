@@ -2325,6 +2325,7 @@
     <string name="pref_enhancement_comic_cache">Comic page cache</string>
     <string name="pref_enhancement_komga_reader">Komga reading</string>
     <string name="pref_enhancement_page_cache_size">Page cache size</string>
+    <string name="pref_enhancement_cache_auto">Automatic (upstream dynamic sizing)</string>
     <string name="pref_enhancement_page_cache_size_summary">Maximum shared disk cache for comic pages from online sources. Restart the app after changing a fixed size.</string>
     <string name="pref_enhancement_prefetch_next">Prefetch following pages</string>
     <string name="pref_enhancement_prefetch_next_summary">Pages after the current page to cache ahead. Reopen the reader after changing this value.</string>

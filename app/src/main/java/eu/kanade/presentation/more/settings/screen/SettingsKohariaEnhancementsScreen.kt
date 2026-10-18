@@ -37,7 +37,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                         preference = preferences.comicPageCacheSizeMb,
                         entries = persistentMapOf(
                             KohariaEnhancementPreferences.AUTO_PAGE_CACHE_SIZE_MB to
-                                stringResource(MR.strings.label_automatic),
+                                stringResource(MR.strings.pref_enhancement_cache_auto),
                             100 to "100 MB",
                             300 to "300 MB",
                             500 to "500 MB",
