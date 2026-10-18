@@ -224,6 +224,12 @@ object SettingsMainScreen : Screen() {
             screen = SettingsSecurityScreen,
         ),
         Item(
+            titleRes = MR.strings.pref_category_koharia_enhancements,
+            subtitleRes = MR.strings.pref_koharia_enhancements_summary,
+            icon = Icons.Outlined.Tune,
+            screen = SettingsKohariaEnhancementsScreen,
+        ),
+        Item(
             titleRes = MR.strings.pref_category_advanced,
             subtitleRes = MR.strings.pref_advanced_summary,
             icon = Icons.Outlined.Code,

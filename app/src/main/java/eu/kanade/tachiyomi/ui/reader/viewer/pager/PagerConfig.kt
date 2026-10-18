@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.ui.reader.viewer.navigation.EdgeNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.KindlishNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.LNavigation
 import eu.kanade.tachiyomi.ui.reader.viewer.navigation.RightAndLeftNavigation
+import koharia.connection.SharedAppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
@@ -71,6 +72,12 @@ class PagerConfig(
     var imageCropBorders = false
         private set
 
+    private val enhancementPreferences = Injekt.get<SharedAppPreferences>().enhancementPreferences()
+    private var requestedDoubleTapZoomEnabled = true
+
+    var rapidTapPagingEnabled = false
+        private set
+
     var doubleTapZoomEnabled = true
         private set
 
@@ -109,7 +116,22 @@ class PagerConfig(
             .register({ imageCropBorders = it }, { imagePropertyChangedListener?.invoke() })
 
         readerPreferences.pagerDoubleTapZoomEnabled
-            .register({ doubleTapZoomEnabled = it }, { imagePropertyChangedListener?.invoke() })
+            .register(
+                {
+                    requestedDoubleTapZoomEnabled = it
+                    updateDoubleTapZoom()
+                },
+                { imagePropertyChangedListener?.invoke() },
+            )
+
+        enhancementPreferences.rapidTapPaging
+            .register(
+                {
+                    rapidTapPagingEnabled = it
+                    updateDoubleTapZoom()
+                },
+                { imagePropertyChangedListener?.invoke() },
+            )
 
         readerPreferences.navigateToPan
             .register({ navigateToPan = it })
@@ -172,6 +194,10 @@ class PagerConfig(
                 { invertDoublePages = it },
                 { imagePropertyChangedListener?.invoke() },
             )
+    }
+
+    private fun updateDoubleTapZoom() {
+        doubleTapZoomEnabled = requestedDoubleTapZoomEnabled && !rapidTapPagingEnabled
     }
 
     private fun updateDoublePages(value: Int) {

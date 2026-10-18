@@ -27,6 +27,9 @@ open class Pager(
     /** Tap listener function to execute when a tap is detected. */
     var tapListener: ((MotionEvent) -> Unit)? = null
 
+    /** When enabled, each short tap is emitted immediately instead of waiting for double-tap detection. */
+    var rapidTapPagingEnabled: () -> Boolean = { false }
+
     /**
      * Long tap listener function to execute when a long tap is detected.
      */
@@ -46,7 +49,9 @@ open class Pager(
      */
     private val gestureListener = object : GestureDetectorWithLongTap.Listener() {
         override fun onSingleTapConfirmed(ev: MotionEvent): Boolean {
-            tapListener?.invoke(ev)
+            if (!rapidTapPagingEnabled()) {
+                tapListener?.invoke(ev)
+            }
             return true
         }
 
@@ -89,6 +94,10 @@ open class Pager(
     private var queuedTapDownX = 0f
     private var queuedTapDownY = 0f
 
+    private var rapidTapEligible = false
+    private var rapidTapDownX = 0f
+    private var rapidTapDownY = 0f
+
     private var pageTurnSwipeCandidate = false
     private var pageTurnSwipeConsumed = false
     private var pageTurnSwipeCanceled = false
@@ -105,12 +114,43 @@ open class Pager(
             handleQueuedPageFlipTap(ev)
             return true
         }
-        if (handlePageTurnSwipe(ev)) return true
+        if (handlePageTurnSwipe(ev)) {
+            rapidTapEligible = false
+            return true
+        }
         val handled = super.dispatchTouchEvent(ev)
         if (isGestureDetectorEnabled) {
             gestureDetector.onTouchEvent(ev)
         }
+        if (rapidTapPagingEnabled()) {
+            handleRapidPagingTap(ev)
+        } else {
+            rapidTapEligible = false
+        }
         return handled
+    }
+
+    private fun handleRapidPagingTap(ev: MotionEvent) {
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                rapidTapEligible = true
+                rapidTapDownX = ev.x
+                rapidTapDownY = ev.y
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> rapidTapEligible = false
+            MotionEvent.ACTION_MOVE -> {
+                if (abs(ev.x - rapidTapDownX) > touchSlop || abs(ev.y - rapidTapDownY) > touchSlop) {
+                    rapidTapEligible = false
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                if (rapidTapEligible) {
+                    tapListener?.invoke(ev)
+                }
+                rapidTapEligible = false
+            }
+            MotionEvent.ACTION_CANCEL -> rapidTapEligible = false
+        }
     }
 
     private fun handlePageTurnSwipe(ev: MotionEvent): Boolean {

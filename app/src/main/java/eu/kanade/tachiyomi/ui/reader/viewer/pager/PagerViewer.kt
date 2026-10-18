@@ -238,6 +238,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         pager.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
             config.onViewportChanged(right - left, bottom - top)
         }
+        pager.rapidTapPagingEnabled = { config.rapidTapPagingEnabled }
         pager.tapListener = { event ->
             val viewPosition = IntArray(2)
             pager.getLocationOnScreen(viewPosition)
