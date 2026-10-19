@@ -91,6 +91,15 @@ class LocalCacheCleaner(
 
     suspend fun clearEpubCache(): Int = epubCacheManager.clear()
 
+    suspend fun clearOtherTemporaryCache(): Int {
+        var deleted = 0
+        deleted += downloadCache.clearDiskCache()
+        deleted += pdfReflowCacheManager.clear()
+        deleted += koharia.smanga.SmangaPdfCache.clear(context)
+        deleted += koharia.kavita.KavitaPdfCache.clear(context)
+        return deleted
+    }
+
     suspend fun clearAllRebuildableCache(): Int {
         return clearCoverCache() + clearAllTemporaryCache()
     }

@@ -1,16 +1,21 @@
 package eu.kanade.presentation.more.settings.screen
 
+import android.text.format.Formatter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.data.cache.LocalCacheCleaner
 import eu.kanade.tachiyomi.util.system.toast
 import koharia.connection.SharedAppPreferences
 import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
@@ -28,6 +33,12 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
         val preferences = remember {
             Injekt.get<SharedAppPreferences>().enhancementPreferences()
         }
+        val cacheCleaner = remember { Injekt.get<LocalCacheCleaner>() }
+        val cacheRevision = remember { mutableIntStateOf(0) }
+        val cacheScope = rememberCoroutineScope()
+        val cacheBreakdown = remember(cacheRevision.intValue) { cacheCleaner.cacheBreakdown() }
+        fun size(bytes: Long): String = Formatter.formatFileSize(context, bytes)
+        val tapToClear = stringResource(MR.strings.pref_enhancement_cache_tap_clear)
 
         return listOf(
             Preference.PreferenceGroup(
@@ -49,6 +60,91 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                         onValueChanged = {
                             context.toast(MR.strings.requires_app_restart)
                             true
+                        },
+                    ),
+                ),
+            ),
+            Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_storage_cache),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_comic_pages),
+                        subtitle = "${size(cacheBreakdown.comicPagesBytes)} / " +
+                            "${size(cacheBreakdown.comicPagesLimitBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheCleaner.clearChapterCache()
+                            cacheRevision.intValue++
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_epub),
+                        subtitle = "${size(cacheBreakdown.epubBytes)} / " +
+                            "${size(cacheBreakdown.epubLimitBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheScope.launch {
+                                cacheCleaner.clearEpubCache()
+                                cacheRevision.intValue++
+                            }
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_covers),
+                        subtitle = "${size(cacheBreakdown.coversBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheCleaner.clearCoverCache()
+                            cacheRevision.intValue++
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_network),
+                        subtitle = "${size(cacheBreakdown.networkBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheCleaner.clearNetworkCache()
+                            cacheRevision.intValue++
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_metadata),
+                        subtitle = "${size(cacheBreakdown.komgaMetadataBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheCleaner.clearKomgaMetadataCache()
+                            cacheRevision.intValue++
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_images),
+                        subtitle = "${size(cacheBreakdown.imageBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheCleaner.clearImageCache()
+                            cacheRevision.intValue++
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_other),
+                        subtitle = "${size(cacheBreakdown.otherTemporaryBytes)}\n$tapToClear",
+                        onClick = {
+                            cacheScope.launch {
+                                cacheCleaner.clearOtherTemporaryCache()
+                                cacheRevision.intValue++
+                            }
+                        },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_total),
+                        subtitle = size(cacheBreakdown.totalRebuildableBytes),
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_refresh),
+                        onClick = { cacheRevision.intValue++ },
+                    ),
+                    Preference.PreferenceItem.TextPreference(
+                        title = stringResource(MR.strings.pref_enhancement_cache_clear_all),
+                        subtitle = stringResource(MR.strings.pref_enhancement_cache_clear_all_summary),
+                        onClick = {
+                            cacheScope.launch {
+                                cacheCleaner.clearAllRebuildableCache()
+                                cacheRevision.intValue++
+                            }
                         },
                     ),
                 ),
