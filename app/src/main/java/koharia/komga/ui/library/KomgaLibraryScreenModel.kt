@@ -693,6 +693,7 @@ class KomgaLibraryScreenModel(
             libraryScope = libraryScope,
         ).configureLatestPushedBookQuery()
 
+        komgaSource.refreshBrowseRequests()
         return komgaSource.getSearchManga(1, "", filters)
             .mangas
             .firstOrNull()
