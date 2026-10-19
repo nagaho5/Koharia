@@ -1,7 +1,11 @@
 package koharia.komga.ui.library.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import eu.kanade.presentation.components.AppBar
 import koharia.connection.LibraryConnectionProfile
 import koharia.connection.ui.ConnectionLibraryToolbar
 import koharia.connection.ui.ConnectionSearchChoice
@@ -25,6 +29,9 @@ fun KomgaLibraryToolbar(
     onConnectionSelect: (Long) -> Unit,
     showFilterAction: Boolean,
     onFilterClick: () -> Unit,
+    onOpenLatest: () -> Unit,
+    onRefresh: () -> Unit,
+    latestEnabled: Boolean,
     navigateUp: (() -> Unit)?,
     onSearch: (String) -> Unit,
     onClickCloseSearch: () -> Unit,
@@ -46,6 +53,19 @@ fun KomgaLibraryToolbar(
         navigateUp = navigateUp,
         showFilterAction = showFilterAction,
         showConnectionAction = connectionProfiles.size > 1,
+        additionalActions = listOf(
+            AppBar.Action(
+                title = stringResource(MR.strings.komga_open_latest_pushed),
+                icon = Icons.Outlined.History,
+                onClick = onOpenLatest,
+                enabled = latestEnabled,
+            ),
+            AppBar.Action(
+                title = stringResource(MR.strings.connection_refresh),
+                icon = Icons.Outlined.Refresh,
+                onClick = onRefresh,
+            ),
+        ),
         searchActions = {
             ConnectionSearchScope(
                 choices = SEARCH_TYPES.map { ConnectionSearchChoice(it, searchTypeLabel(it)) },

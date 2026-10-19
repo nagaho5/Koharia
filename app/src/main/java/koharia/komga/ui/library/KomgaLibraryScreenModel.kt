@@ -60,6 +60,7 @@ import koharia.source.komga.LibraryFilter
 import koharia.source.komga.OneshotFilter
 import koharia.source.komga.ReadFilter
 import koharia.source.komga.ReadingStateGroup
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.SeriesSort
 import koharia.source.komga.TYPE_ALL_INDEX
 import koharia.source.komga.TYPE_BOOKS_INDEX
@@ -680,6 +681,22 @@ class KomgaLibraryScreenModel(
             refreshReadProgress(forceRefresh = true)
             refreshSignal.value += 1
         }
+    }
+
+    suspend fun latestPushedBook(): Manga? {
+        val komgaSource = source as? KomgaSource ?: return null
+        if (basePreferences.downloadedOnly.get() || !komgaSource.hasValidBaseUrl()) return null
+
+        val filters = komgaSource.buildFilterListForLibrary(
+            libraryId = state.value.selectedKomgaLibraryId,
+            allowedLibraryIds = currentAllowedLibraryIds(),
+            libraryScope = libraryScope,
+        ).configureLatestPushedBookQuery()
+
+        return komgaSource.getSearchManga(1, "", filters)
+            .mangas
+            .firstOrNull()
+            ?.toDomainManga(komgaSource.id)
     }
 
     suspend fun prepareSingleBook(manga: Manga): Pair<Manga, Chapter> {
@@ -1377,6 +1394,18 @@ private val Manga.cachedLibraryIds: Set<String>
                 element.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank)
             }
     }
+
+internal fun FilterList.configureLatestPushedBookQuery(): FilterList = apply {
+    filterIsInstance<TypeSelect>().firstOrNull()?.state = TYPE_BOOKS_INDEX
+    filterIsInstance<SeriesSort>().firstOrNull()?.state =
+        Filter.Sort.Selection(RECENTLY_READ_SORT_INDEX, false)
+    filterIsInstance<ReadingStateGroup>().firstOrNull()?.state.orEmpty().forEach { filter ->
+        when (filter) {
+            is InProgressFilter, is ReadFilter -> filter.state = true
+            is UnreadFilter, is OneshotFilter -> filter.state = false
+        }
+    }
+}
 
 internal val CACHED_ONLY_LOAD_STATES = LoadStates(
     refresh = LoadState.NotLoading(endOfPaginationReached = true),

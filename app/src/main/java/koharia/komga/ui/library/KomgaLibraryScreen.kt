@@ -94,6 +94,7 @@ import tachiyomi.core.common.DocumentationUrls
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
+import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.domain.source.service.SourceManager
@@ -238,6 +239,66 @@ data class KomgaLibraryScreen(
         val entryOpenPreferences = remember { Injekt.get<EntryOpenPreferences>() }
         val readerLauncher = remember { EpubReaderLauncher() }
         var openingBook by remember { mutableStateOf(false) }
+        val noLatestBookMessage = stringResource(MR.strings.komga_no_recently_read_book)
+
+        suspend fun openEntry(manga: Manga) {
+            val mode = if (manga.url.contains("/api/v1/books/")) {
+                entryOpenPreferences.komgaMode()
+            } else {
+                EntryOpenMode.DETAILS
+            }
+            if (mode == EntryOpenMode.DETAILS) {
+                navigator.push(MangaScreen(manga.id, true, manga.source, manga.url))
+                return
+            }
+
+            val (preparedManga, chapter) = screenModel.prepareSingleBook(manga)
+            if (mode == EntryOpenMode.PAGE_PREVIEW) {
+                navigator.push(LanraragiArchivePreviewScreen(preparedManga.id, preparedManga.source))
+            } else {
+                context.startActivity(
+                    readerLauncher.resolveIntent(context, preparedManga.id, chapter.id),
+                )
+            }
+        }
+
+        fun launchOpenEntry(manga: Manga) {
+            if (openingBook) return
+            openingBook = true
+            scope.launch {
+                try {
+                    openEntry(manga)
+                } catch (error: Throwable) {
+                    snackbarHostState.showSnackbar(
+                        error.localizedMessage ?: context.getString(R.string.unknown_error),
+                    )
+                } finally {
+                    openingBook = false
+                }
+            }
+        }
+
+        fun openLatestPushedBook() {
+            if (openingBook) return
+            openingBook = true
+            scope.launch {
+                try {
+                    val latest = screenModel.latestPushedBook()
+                    if (latest == null) {
+                        snackbarHostState.showSnackbar(noLatestBookMessage)
+                    } else {
+                        openEntry(latest)
+                    }
+                } catch (error: Throwable) {
+                    snackbarHostState.showSnackbar(
+                        error.localizedMessage ?: context.getString(R.string.unknown_error),
+                    )
+                } finally {
+                    openingBook = false
+                }
+            }
+        }
+
         val mangaList = screenModel.mangaPagerFlow.collectAsLazyPagingItems()
         LaunchedEffect(mangaList.loadState.refresh, mangaList.itemCount, state.isServerConfigured) {
             if (state.isServerConfigured && mangaList.itemCount == 0 &&
@@ -300,6 +361,9 @@ data class KomgaLibraryScreen(
                         },
                         showFilterAction = state.filters.isNotEmpty(),
                         onFilterClick = screenModel::openFilterSheet,
+                        onOpenLatest = ::openLatestPushedBook,
+                        onRefresh = screenModel::refresh,
+                        latestEnabled = state.isServerConfigured && !screenModel.cachedOnly,
                         navigateUp = navigateUp.takeIf { showNavigationUp },
                         onSearch = screenModel::search,
                         onClickCloseSearch = screenModel::exitSearch,
@@ -403,36 +467,7 @@ data class KomgaLibraryScreen(
                         },
                         onWebViewClick = onWebViewClick,
                         onHelpClick = onHelpClick,
-                        onMangaClick = {
-                            val mode = if (it.url.contains("/api/v1/books/")) {
-                                entryOpenPreferences.komgaMode()
-                            } else {
-                                EntryOpenMode.DETAILS
-                            }
-                            if (mode == EntryOpenMode.DETAILS) {
-                                navigator.push(MangaScreen(it.id, true, it.source, it.url))
-                            } else if (!openingBook) {
-                                openingBook = true
-                                scope.launch {
-                                    runCatching { screenModel.prepareSingleBook(it) }
-                                        .onSuccess { (manga, chapter) ->
-                                            if (mode == EntryOpenMode.PAGE_PREVIEW) {
-                                                navigator.push(LanraragiArchivePreviewScreen(manga.id, manga.source))
-                                            } else {
-                                                context.startActivity(
-                                                    readerLauncher.resolveIntent(context, manga.id, chapter.id),
-                                                )
-                                            }
-                                        }
-                                        .onFailure { error ->
-                                            snackbarHostState.showSnackbar(
-                                                error.localizedMessage ?: context.getString(R.string.unknown_error),
-                                            )
-                                        }
-                                    openingBook = false
-                                }
-                            }
-                        },
+                        onMangaClick = ::launchOpenEntry,
                         onMangaLongClick = {},
                         modifier = Modifier.offset { IntOffset(x = 0, y = pullOffsetPx.roundToInt()) },
                     )
