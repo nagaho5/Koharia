@@ -8,6 +8,8 @@ import koharia.domain.manga.model.toDomainManga
 import koharia.source.komga.KomgaLibraryScope
 import koharia.source.komga.KomgaSource
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
@@ -52,7 +54,7 @@ internal class KomgaLatestPushedBookResolver(
         libraryId: String? = null,
         allowedLibraryIds: Set<String>? = null,
         libraryScope: KomgaLibraryScope = KomgaLibraryScope.ALL,
-    ): PreparedKomgaLatestBook? {
+    ): PreparedKomgaLatestBook? = withContext(Dispatchers.IO) {
         val remote = atStage(KomgaLatestBookStage.LOOKUP, null) {
             val filters = source.buildFilterListForLibrary(
                 libraryId = libraryId,
@@ -60,7 +62,7 @@ internal class KomgaLatestPushedBookResolver(
                 libraryScope = libraryScope,
             ).configureLatestPushedBookQuery()
             source.getFreshSearchManga(1, "", filters).mangas.firstOrNull()
-        } ?: return null
+        } ?: return@withContext null
 
         val remoteManga = remote.toDomainManga(source.id)
         val localManga = atStage(KomgaLatestBookStage.MATERIALIZE, remoteManga.url) {
@@ -85,7 +87,7 @@ internal class KomgaLatestPushedBookResolver(
             "Komga latest-pushed prepared sourceId=${source.id} mangaId=${localManga.id} " +
                 "chapterId=${chapter.id} bookUrl=${localManga.url}"
         }
-        return PreparedKomgaLatestBook(localManga, chapter)
+        PreparedKomgaLatestBook(localManga, chapter)
     }
 
     private suspend fun <T> atStage(
