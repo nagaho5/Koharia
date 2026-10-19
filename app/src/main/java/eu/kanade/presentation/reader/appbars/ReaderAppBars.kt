@@ -92,6 +92,7 @@ fun ReaderAppBars(
     onClickShiftDoublePages: () -> Unit,
     onClickBookmark: () -> Unit,
     onClickSettings: () -> Unit,
+    onOpenLatestPushed: (() -> Unit)? = null,
     onPdfReflow: (() -> Unit)? = null,
 ) {
     val backgroundColor = MaterialTheme.colorScheme
@@ -222,6 +223,7 @@ fun ReaderAppBars(
                     onClickShiftDoublePages = onClickShiftDoublePages,
                     onClickBookmark = onClickBookmark,
                     onClickSettings = onClickSettings,
+                    onOpenLatestPushed = onOpenLatestPushed,
                 )
             }
         }

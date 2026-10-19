@@ -110,6 +110,7 @@ import koharia.epub.DocumentBookInfoDialog
 import koharia.epub.EpubBottomPanel
 import koharia.epub.EpubDocumentMorePanel
 import koharia.epub.EpubReaderActivity
+import koharia.epub.EpubReaderLauncher
 import koharia.epub.EpubReaderBottomArea
 import koharia.epub.EpubReaderTopBar
 import koharia.epub.font.EpubFontManager
@@ -117,6 +118,11 @@ import koharia.epub.model.EpubOpenRequest
 import koharia.epub.service.EpubReaderSupportResolution
 import koharia.epub.settings.EpubLayoutPreferences
 import koharia.epub.settings.EpubReaderPreferences
+import koharia.komga.ui.library.KomgaLatestPushedBookResolver
+import koharia.komga.ui.library.komgaLatestBookFailureSummary
+import koharia.komga.ui.library.komgaLatestBookLaunchException
+import koharia.komga.ui.library.recordKomgaLatestBookFailure
+import koharia.source.komga.KomgaSource
 import koharia.importing.IncomingMediaNavigation
 import koharia.importing.IncomingMediaSessionLocator
 import koharia.pdf.cache.PdfReflowCacheManager
@@ -286,6 +292,9 @@ class ReaderActivity : BaseActivity() {
 
     private var menuToggleToast: Toast? = null
     private var readingModeToast: Toast? = null
+    private var openingLatestPushedBook = false
+    private val latestPushedBookResolver by lazy { KomgaLatestPushedBookResolver() }
+    private val latestPushedBookReaderLauncher by lazy { EpubReaderLauncher() }
     private val displayRefreshHost by lazy { DisplayRefreshHost(readerPreferences) }
 
     private val windowInsetsController by lazy { WindowInsetsControllerCompat(window, window.decorView) }
@@ -1030,6 +1039,7 @@ class ReaderActivity : BaseActivity() {
                     },
                 )
             },
+            onOpenLatestPushed = ::openLatestPushedBook.takeIf { viewModel.getSource() is KomgaSource },
         )
     }
 
@@ -1317,6 +1327,44 @@ class ReaderActivity : BaseActivity() {
         binding.readerContainer.addView(loadingIndicator)
 
         startPostponedEnterTransition()
+    }
+
+    private fun openLatestPushedBook() {
+        if (openingLatestPushedBook) return
+        val source = viewModel.getSource() as? KomgaSource ?: return
+
+        openingLatestPushedBook = true
+        lifecycleScope.launch {
+            try {
+                val latest = latestPushedBookResolver.resolveAndPrepare(source)
+                if (latest == null) {
+                    toast(MR.strings.komga_no_recently_read_book)
+                    return@launch
+                }
+
+                try {
+                    startActivity(
+                        latestPushedBookReaderLauncher.resolveIntent(
+                            this@ReaderActivity,
+                            latest.manga.id,
+                            latest.chapter.id,
+                        ),
+                    )
+                } catch (error: Throwable) {
+                    throw komgaLatestBookLaunchException(latest.manga.url, error)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                recordKomgaLatestBookFailure(this@ReaderActivity, "reader", source.id, error)
+                toast(
+                    stringResource(MR.strings.komga_open_latest_failed) +
+                        ": " + komgaLatestBookFailureSummary(error),
+                )
+            } finally {
+                openingLatestPushedBook = false
+            }
+        }
     }
 
     private fun openMangaScreen() {

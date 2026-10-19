@@ -362,6 +362,9 @@ class KomgaSource(
     override suspend fun getSearchManga(page: Int, query: String, filters: FilterList) =
         repository.getSearchManga(page, query, filters, shelfLibraryIds, consumeBrowseCachePolicy())
 
+    suspend fun getFreshSearchManga(page: Int, query: String, filters: FilterList) =
+        repository.getSearchManga(page, query, filters, shelfLibraryIds, KomgaCachePolicy.NetworkFirst)
+
     override fun getMangaUrl(manga: eu.kanade.tachiyomi.source.model.SManga): String = manga.url.replace("/api/v1", "")
 
     override fun mangaDetailsRequest(manga: eu.kanade.tachiyomi.source.model.SManga): Request =

@@ -365,6 +365,7 @@
     <string name="komga_filter_sort_date_updated">Date updated</string>
     <string name="komga_filter_sort_recently_read">Recently read</string>
     <string name="komga_open_latest_pushed">Open latest pushed book</string>
+    <string name="komga_open_latest_failed">Failed to open latest pushed book</string>
     <string name="komga_no_recently_read_book">No recently pushed book was found in this shelf.</string>
     <string name="komga_filter_in_progress">In progress</string>
     <string name="komga_filter_read">Read</string>

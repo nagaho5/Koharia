@@ -683,21 +683,16 @@ class KomgaLibraryScreenModel(
         }
     }
 
-    suspend fun latestPushedBook(): Manga? {
+    suspend fun latestPushedBook(): PreparedKomgaLatestBook? {
         val komgaSource = source as? KomgaSource ?: return null
         if (basePreferences.downloadedOnly.get() || !komgaSource.hasValidBaseUrl()) return null
 
-        val filters = komgaSource.buildFilterListForLibrary(
+        return KomgaLatestPushedBookResolver().resolveAndPrepare(
+            source = komgaSource,
             libraryId = state.value.selectedKomgaLibraryId,
             allowedLibraryIds = currentAllowedLibraryIds(),
             libraryScope = libraryScope,
-        ).configureLatestPushedBookQuery()
-
-        komgaSource.refreshBrowseRequests()
-        return komgaSource.getSearchManga(1, "", filters)
-            .mangas
-            .firstOrNull()
-            ?.toDomainManga(komgaSource.id)
+        )
     }
 
     suspend fun prepareSingleBook(manga: Manga): Pair<Manga, Chapter> {

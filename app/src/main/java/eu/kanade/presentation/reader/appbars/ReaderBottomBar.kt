@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.BrightnessMedium
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SwapHoriz
@@ -44,6 +45,7 @@ fun ReaderBottomBar(
     onClickShiftDoublePages: () -> Unit,
     onClickBookmark: () -> Unit,
     onClickSettings: () -> Unit,
+    onOpenLatestPushed: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -111,6 +113,15 @@ fun ReaderBottomBar(
                     androidx.compose.material3.LocalContentColor.current
                 },
             )
+        }
+
+        onOpenLatestPushed?.let { onClick ->
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.Outlined.History,
+                    contentDescription = stringResource(MR.strings.komga_open_latest_pushed),
+                )
+            }
         }
     }
 }

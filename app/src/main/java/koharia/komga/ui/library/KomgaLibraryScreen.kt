@@ -86,6 +86,7 @@ import koharia.source.komga.KomgaServerSettingsScreen
 import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.SeriesSort
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -240,6 +241,7 @@ data class KomgaLibraryScreen(
         val readerLauncher = remember { EpubReaderLauncher() }
         var openingBook by remember { mutableStateOf(false) }
         val noLatestBookMessage = stringResource(MR.strings.komga_no_recently_read_book)
+        val latestBookFailedMessage = stringResource(MR.strings.komga_open_latest_failed)
 
         suspend fun openEntry(manga: Manga) {
             val mode = if (manga.url.contains("/api/v1/books/")) {
@@ -287,11 +289,24 @@ data class KomgaLibraryScreen(
                     if (latest == null) {
                         snackbarHostState.showSnackbar(noLatestBookMessage)
                     } else {
-                        openEntry(latest)
+                        try {
+                            context.startActivity(
+                                readerLauncher.resolveIntent(
+                                    context,
+                                    latest.manga.id,
+                                    latest.chapter.id,
+                                ),
+                            )
+                        } catch (error: Throwable) {
+                            throw komgaLatestBookLaunchException(latest.manga.url, error)
+                        }
                     }
+                } catch (error: CancellationException) {
+                    throw error
                 } catch (error: Throwable) {
+                    recordKomgaLatestBookFailure(context, "shelf", sourceId, error)
                     snackbarHostState.showSnackbar(
-                        error.localizedMessage ?: context.getString(R.string.unknown_error),
+                        "$latestBookFailedMessage: ${komgaLatestBookFailureSummary(error)}",
                     )
                 } finally {
                     openingBook = false

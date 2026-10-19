@@ -159,6 +159,7 @@
     <string name="komga_filter_sort_date_updated">更新时间</string>
     <string name="komga_filter_sort_recently_read">最近阅读</string>
     <string name="komga_open_latest_pushed">打开最新推送</string>
+    <string name="komga_open_latest_failed">打开最新推送失败</string>
     <string name="komga_no_recently_read_book">当前书架没有找到最近推送的单行本。</string>
     <string name="komga_filter_in_progress">继续阅读</string>
     <string name="komga_filter_read">已读</string>
