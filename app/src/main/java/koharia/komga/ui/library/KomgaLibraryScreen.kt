@@ -75,6 +75,7 @@ import koharia.connection.SharedAppPreferences
 import koharia.connection.ui.ConnectionSearchResults
 import koharia.connection.ui.ConnectionSearchSortOption
 import koharia.connection.ui.LibraryConnectionSetupPrompt
+import koharia.enhancement.simplifyKomgaDisplayTitle
 import koharia.epub.EpubReaderLauncher
 import koharia.epub.cache.EpubCacheManager
 import koharia.komga.ui.library.components.KomgaLibraryToolbar
@@ -146,6 +147,10 @@ data class KomgaLibraryScreen(
         val sourcePreferences: SourcePreferences = Injekt.get()
         val sharedAppPreferences: SharedAppPreferences = Injekt.get()
         val basePreferences = remember(sourceId) { sharedAppPreferences.basePreferences() }
+        val enhancementPreferences = remember(sharedAppPreferences) {
+            sharedAppPreferences.enhancementPreferences()
+        }
+        val simplifyBookTitles by enhancementPreferences.simplifyKomgaBookTitles.collectAsState()
         val libraryPreferences: LibraryPreferences = Injekt.get()
         val showLibraryReadProgress by libraryPreferences.showLibraryReadProgress.collectAsState()
         val connectionPreferences: ConnectionPreferences = Injekt.get()
@@ -388,6 +393,13 @@ data class KomgaLibraryScreen(
                             { manga -> readProgressByUrl[manga.url.trimEnd('/')] }
                         } else {
                             null
+                        },
+                        entryLabel = { manga ->
+                            if (simplifyBookTitles && manga.url.contains("/api/v1/books/")) {
+                                simplifyKomgaDisplayTitle(manga.title)
+                            } else {
+                                manga.title
+                            }
                         },
                         onWebViewClick = onWebViewClick,
                         onHelpClick = onHelpClick,

@@ -188,7 +188,14 @@ class HistoryScreenModel(
         screenModelScope.launchIO {
             val scope = currentHistoryScope() ?: return@launchIO
             if (!scope.allows(mangaId)) return@launchIO
-            val chapters = getNextChapters.await(mangaId, chapterId, onlyUnread = false)
+            val manga = getManga.await(mangaId)
+            val chapters = if (manga?.url?.contains("/api/v1/books/") == true) {
+                // A Komga Book materializes as a one-chapter manga. History should always
+                // reopen that book itself, even when Komga currently marks it completed.
+                getNextChapters.await(mangaId, onlyUnread = false)
+            } else {
+                getNextChapters.await(mangaId, chapterId, onlyUnread = false)
+            }
             if (scope.isCurrent()) sendNextChapterEvent(chapters)
         }
     }
@@ -261,16 +268,20 @@ class HistoryScreenModel(
         if (bookLibraryIds.isEmpty()) return this
 
         val mode = Injekt.get<SharedAppPreferences>().enhancementPreferences().komgaBookHistoryMode.get()
-        return filter { row ->
-            val manga = getManga.await(row.mangaId) ?: return@filter true
-            val libraryId = manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]?.jsonPrimitive?.contentOrNull
-            if (libraryId !in bookLibraryIds) {
-                true
-            } else {
-                shouldDisplayKomgaHistoryManga(
-                    isBookManga = manga.url.contains("/api/v1/books/"),
-                    mode = mode,
-                )
+        return buildList {
+            for (row in this@forKomgaHistoryMode) {
+                val manga = getManga.await(row.mangaId)
+                if (manga == null) {
+                    add(row)
+                    continue
+                }
+                val libraryId = manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]?.jsonPrimitive?.contentOrNull
+                val include = libraryId !in bookLibraryIds ||
+                    shouldDisplayKomgaHistoryManga(
+                        isBookManga = manga.url.contains("/api/v1/books/"),
+                        mode = mode,
+                    )
+                if (include) add(row)
             }
         }
     }
