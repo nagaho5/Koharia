@@ -136,7 +136,7 @@ internal fun recordKomgaLatestBookFailure(
         append(root.message ?: "<none>")
     }
     val diagnostic = IllegalStateException(details, root)
-    logcat(LogPriority.ERROR, diagnostic) { "Komga latest-pushed failure: $details" }
+    context.logcat(LogPriority.ERROR, diagnostic) { "Komga latest-pushed failure: $details" }
     CrashDiagnostics.recordNonFatal(
         context,
         "komga.latest-pushed.$origin.${stage.name.lowercase()}",

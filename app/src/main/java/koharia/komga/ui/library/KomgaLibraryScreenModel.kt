@@ -683,7 +683,7 @@ class KomgaLibraryScreenModel(
         }
     }
 
-    suspend fun latestPushedBook(): PreparedKomgaLatestBook? {
+    internal suspend fun latestPushedBook(): PreparedKomgaLatestBook? {
         val komgaSource = source as? KomgaSource ?: return null
         if (basePreferences.downloadedOnly.get() || !komgaSource.hasValidBaseUrl()) return null
 
