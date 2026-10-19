@@ -18,6 +18,9 @@ class KohariaEnhancementPreferences(
     val komgaBookHistoryMode: Preference<Int> =
         preferenceStore.getInt("custom_komga_book_history_mode", BOOK_HISTORY_MODE_BOOK)
 
+    val simplifyKomgaBookTitles: Preference<Boolean> =
+        preferenceStore.getBoolean("custom_komga_simplify_book_titles", true)
+
     val rapidTapPaging: Preference<Boolean> =
         preferenceStore.getBoolean("custom_reader_rapid_tap", false)
 

@@ -2209,6 +2209,9 @@
     <string name="pref_enhancement_prefetch_next_summary">当前页之后提前缓存的页数；重新打开阅读器后生效。</string>
     <string name="pref_enhancement_prefetch_previous">前序页预加载</string>
     <string name="pref_enhancement_prefetch_previous_summary">当前页之前保留的预加载页数；跳页时会围绕新位置重建窗口。</string>
+    <string name="pref_enhancement_display">显示优化</string>
+    <string name="pref_enhancement_simplify_book_titles">简化 Komga 单行本标题</string>
+    <string name="pref_enhancement_simplify_book_titles_summary">仅优化界面显示：去掉标题开头的活动/类型圆括号，以及紧随其后的第一个作者/社团方括号。不会修改文件、路径、Komga 元数据或保存的原始标题。</string>
     <string name="pref_enhancement_controls">操作与翻页</string>
     <string name="pref_enhancement_rapid_tap">快速连续点击翻页</string>
     <string name="pref_enhancement_rapid_tap_summary">分页漫画阅读器中，每次短按都立即计为一次翻页；启用时双击放大自动停用，双指缩放和拖动不变。</string>

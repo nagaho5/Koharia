@@ -190,6 +190,16 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                 ),
             ),
             Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_display),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = preferences.simplifyKomgaBookTitles,
+                        title = stringResource(MR.strings.pref_enhancement_simplify_book_titles),
+                        subtitle = stringResource(MR.strings.pref_enhancement_simplify_book_titles_summary),
+                    ),
+                ),
+            ),
+            Preference.PreferenceGroup(
                 title = stringResource(MR.strings.pref_enhancement_controls),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.SwitchPreference(
