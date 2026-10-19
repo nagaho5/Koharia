@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.ColorMatrix
@@ -1346,13 +1347,17 @@ class ReaderActivity : BaseActivity() {
                 }
 
                 try {
-                    startActivity(
-                        latestPushedBookReaderLauncher.resolveIntent(
-                            this@ReaderActivity,
-                            latest.manga.id,
-                            latest.chapter.id,
-                        ),
+                    val targetIntent = latestPushedBookReaderLauncher.resolveIntent(
+                        this@ReaderActivity,
+                        latest.manga.id,
+                        latest.chapter.id,
                     )
+                    val replacesSingleTask = targetIntent.component == componentName &&
+                        packageManager.getActivityInfo(componentName, 0).launchMode ==
+                        ActivityInfo.LAUNCH_SINGLE_TASK
+                    if (replacesSingleTask) finish()
+                    startActivity(targetIntent)
+                    if (!replacesSingleTask) finish()
                 } catch (error: Throwable) {
                     throw komgaLatestBookLaunchException(latest.manga.url, error)
                 }
