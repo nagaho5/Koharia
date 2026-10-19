@@ -482,14 +482,11 @@ class KomgaProgressSyncService(
     }
 
     private fun shouldUseBookHistory(sourceId: Long, remote: KomgaApi.SeriesBookProgress): Boolean {
-        if (
-            enhancementPreferences.komgaBookHistoryMode.get() !=
-            KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK
-        ) {
-            return false
-        }
-        if (!libraryClassificationManager.enabled.get() || remote.libraryId.isBlank()) return false
-        return remote.libraryId in libraryClassificationManager.libraryIds(sourceId, KomgaLibraryKind.BOOK)
+        return shouldUseKomgaBookHistory(
+            mode = enhancementPreferences.komgaBookHistoryMode.get(),
+            libraryId = remote.libraryId,
+            bookLibraryIds = libraryClassificationManager.libraryIds(sourceId, KomgaLibraryKind.BOOK),
+        )
     }
 
     private suspend fun materializeBookHistoryManga(
@@ -568,6 +565,16 @@ class KomgaProgressSyncService(
         val chapters: Map<String, Chapter>,
         val refreshed: Boolean,
     )
+}
+
+internal fun shouldUseKomgaBookHistory(
+    mode: Int,
+    libraryId: String,
+    bookLibraryIds: Set<String>,
+): Boolean {
+    return mode == KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK &&
+        libraryId.isNotBlank() &&
+        libraryId in bookLibraryIds
 }
 
 internal fun selectRelevantKomgaEpubChapters(

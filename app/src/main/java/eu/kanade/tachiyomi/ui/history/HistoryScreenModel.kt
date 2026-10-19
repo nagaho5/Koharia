@@ -15,6 +15,7 @@ import koharia.connection.NO_ACTIVE_CONNECTION
 import koharia.connection.SharedAppPreferences
 import koharia.connection.isConnectionLibraryEntry
 import koharia.enhancement.KohariaEnhancementPreferences
+import koharia.komga.api.dto.KOMGA_LIBRARY_IDS_MEMO_KEY
 import koharia.komga.api.dto.KOMGA_LIBRARY_ID_MEMO_KEY
 import koharia.source.komga.KomgaLibraryClassificationManager
 import koharia.source.komga.KomgaLibraryKind
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import logcat.LogPriority
@@ -84,6 +86,12 @@ class HistoryScreenModel(
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
 
+    private val enhancementPreferences = Injekt.get<SharedAppPreferences>().enhancementPreferences()
+    private val historyModeChanges = enhancementPreferences.komgaBookHistoryMode.changes()
+        .onStart { emit(enhancementPreferences.komgaBookHistoryMode.get()) }
+        .distinctUntilChanged()
+        .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
+
     private val historyScopeGeneration = AtomicLong()
     private val historyScopes = combine(
         connectionPreferences.activeConnectionId.changes().distinctUntilChanged(),
@@ -99,7 +107,7 @@ class HistoryScreenModel(
 
     init {
         screenModelScope.launchIO {
-            historyScopes
+            combine(historyScopes, historyModeChanges) { scope, _ -> scope }
                 .collectLatest(::syncConnectionHistory)
         }
 
@@ -108,8 +116,9 @@ class HistoryScreenModel(
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged(),
                 historyScopes,
-            ) { query, scope -> query to scope }
-                .flatMapLatest { (query, scope) ->
+                historyModeChanges,
+            ) { query, scope, historyMode -> Triple(query, scope, historyMode) }
+                .flatMapLatest { (query, scope, historyMode) ->
                     val history = if (scope.sourceId == NO_ACTIVE_CONNECTION) {
                         flowOf(emptyList())
                     } else {
@@ -122,7 +131,7 @@ class HistoryScreenModel(
                             if (!scope.isCurrent() || sourceManager.get(scope.sourceId) == null) {
                                 emptyList()
                             } else {
-                                rows.withinScope(allowed).forKomgaHistoryMode(scope)
+                                rows.withinScope(allowed).forKomgaHistoryMode(scope, historyMode)
                             }
                         }
                         .onStart { emit(emptyList()) }
@@ -260,14 +269,13 @@ class HistoryScreenModel(
 
     private suspend fun List<HistoryWithRelations>.forKomgaHistoryMode(
         scope: HistoryScope,
+        mode: Int,
     ): List<HistoryWithRelations> {
         if (sourceManager.get(scope.sourceId) !is KomgaSource) return this
         val classificationManager = Injekt.get<KomgaLibraryClassificationManager>()
-        if (!classificationManager.enabled.get()) return this
         val bookLibraryIds = classificationManager.libraryIds(scope.sourceId, KomgaLibraryKind.BOOK)
         if (bookLibraryIds.isEmpty()) return this
 
-        val mode = Injekt.get<SharedAppPreferences>().enhancementPreferences().komgaBookHistoryMode.get()
         return buildList {
             for (row in this@forKomgaHistoryMode) {
                 val manga = getManga.await(row.mangaId)
@@ -275,8 +283,20 @@ class HistoryScreenModel(
                     add(row)
                     continue
                 }
-                val libraryId = manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]?.jsonPrimitive?.contentOrNull
-                val include = libraryId !in bookLibraryIds ||
+                val libraryIds = buildSet {
+                    manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]
+                        ?.jsonPrimitive
+                        ?.contentOrNull
+                        ?.takeIf(String::isNotBlank)
+                        ?.let(::add)
+                    (manga.memo[KOMGA_LIBRARY_IDS_MEMO_KEY] as? JsonArray)
+                        .orEmpty()
+                        .mapNotNullTo(this) { element ->
+                            element.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank)
+                        }
+                }
+                val belongsToBookLibrary = libraryIds.any { it in bookLibraryIds }
+                val include = !belongsToBookLibrary ||
                     shouldDisplayKomgaHistoryManga(
                         isBookManga = manga.url.contains("/api/v1/books/"),
                         mode = mode,

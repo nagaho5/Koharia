@@ -128,10 +128,11 @@ class KomgaSseClient(
             return
         }
 
-        val httpUrl = "$baseUrl/api/v1/sse/v1/events".toHttpUrlOrNull()
+        val sseUrl = komgaSseUrl(baseUrl)
+        val httpUrl = sseUrl.toHttpUrlOrNull()
         if (httpUrl == null) {
             isConnecting = false
-            logcat(LogPriority.WARN) { "Komga SSE: invalid base URL: $baseUrl" }
+            logcat(LogPriority.WARN) { "Komga SSE: invalid URL: $sseUrl" }
             return
         }
 
@@ -151,7 +152,7 @@ class KomgaSseClient(
             ).also { activeTarget = it }
         }
 
-        logcat(LogPriority.INFO) { "Komga SSE connecting to $baseUrl/api/v1/sse/v1/events" }
+        logcat(LogPriority.INFO) { "Komga SSE connecting to $sseUrl" }
 
         val factory = EventSources.createFactory(eventSourceClient)
         eventSource = factory.newEventSource(
@@ -346,6 +347,8 @@ class KomgaSseClient(
         const val PROGRESS_SYNC_DEBOUNCE_MS = 300L
     }
 }
+
+internal fun komgaSseUrl(baseUrl: String): String = "${baseUrl.trimEnd('/')}/sse/v1/events"
 
 internal fun reconnectDelayMillis(attempt: Int): Long {
     val safeAttempt = attempt.coerceIn(0, 5)

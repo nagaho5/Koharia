@@ -26,6 +26,12 @@ class KomgaSseProgressSyncQueueTest {
     }
 
     @Test
+    fun `SSE endpoint uses Komga root route`() {
+        assertEquals("https://komga.test/sse/v1/events", komgaSseUrl("https://komga.test"))
+        assertEquals("https://komga.test/sse/v1/events", komgaSseUrl("https://komga.test/"))
+    }
+
+    @Test
     fun `reconnect backoff is bounded`() {
         assertEquals(1_000L, reconnectDelayMillis(0))
         assertEquals(2_000L, reconnectDelayMillis(1))

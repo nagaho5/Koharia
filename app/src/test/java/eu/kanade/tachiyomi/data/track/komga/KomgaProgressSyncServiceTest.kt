@@ -7,11 +7,39 @@ import kotlinx.serialization.json.put
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.Chapter
 import java.util.Date
 
 class KomgaProgressSyncServiceTest {
+
+    @Test
+    fun `book history follows actual library classification without an extra enable flag`() {
+        val bookLibraries = setOf("book-library")
+
+        assertTrue(
+            shouldUseKomgaBookHistory(
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK,
+                libraryId = "book-library",
+                bookLibraryIds = bookLibraries,
+            ),
+        )
+        assertFalse(
+            shouldUseKomgaBookHistory(
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES,
+                libraryId = "book-library",
+                bookLibraryIds = bookLibraries,
+            ),
+        )
+        assertFalse(
+            shouldUseKomgaBookHistory(
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK,
+                libraryId = "comic-library",
+                bookLibraryIds = bookLibraries,
+            ),
+        )
+    }
 
     @Test
     fun `missing Komga read progress is applied as unread`() {
