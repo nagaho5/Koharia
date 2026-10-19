@@ -18,6 +18,7 @@ on:
       - main
       - feature/komga-recent-read-sort-v070
       - feature/koharia-enhancements-v070
+      - feature/koharia-history-cache-display-v070
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

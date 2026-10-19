@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/koharia-enhancements-v070
+      - feature/koharia-history-cache-display-v070
   workflow_dispatch:
 
 permissions:
