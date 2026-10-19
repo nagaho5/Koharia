@@ -49,6 +49,8 @@ class KomgaSseClient(
     private val progressSyncLock = Any()
     private val progressSyncQueue = KomgaSseProgressSyncQueue()
     private var progressSyncJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var reconnectAttempt = 0
     private var connectionGeneration = 0L
     private var activeTarget: KomgaSseConnectionTarget? = null
     private val eventSourceClient get() =
@@ -159,6 +161,15 @@ class KomgaSseClient(
                     if (!isCurrentConnection(target)) return
                     logcat(LogPriority.INFO) { "Komga SSE connected" }
                     isConnecting = false
+                    reconnectAttempt = 0
+                    reconnectJob?.cancel()
+                    reconnectJob = null
+
+                    // SSE has no replay cursor here. Every successful reconnect may have missed
+                    // changes while the app was backgrounded or the socket was unavailable, so
+                    // invalidate the visible shelf and run one full progress/history catch-up.
+                    koharia.connection.ConnectionShelfUpdates.notify(target.sourceId)
+                    scheduleProgressSync(target, null)
                 }
 
                 override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
@@ -170,11 +181,13 @@ class KomgaSseClient(
                 override fun onClosed(eventSource: EventSource) {
                     if (!finishConnection(target, eventSource)) return
                     logcat(LogPriority.INFO) { "Komga SSE closed" }
+                    scheduleReconnect("stream closed")
                 }
 
                 override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
                     if (!finishConnection(target, eventSource)) return
                     logcat(LogPriority.ERROR, t) { "Komga SSE failure: ${response?.code}" }
+                    scheduleReconnect("stream failure")
                 }
             },
         )
@@ -185,6 +198,9 @@ class KomgaSseClient(
         val sourceToCancel = eventSource
         eventSource = null
         isConnecting = false
+        reconnectJob?.cancel()
+        reconnectJob = null
+        reconnectAttempt = 0
         val syncJob = synchronized(progressSyncLock) {
             connectionGeneration++
             activeTarget = null
@@ -231,6 +247,7 @@ class KomgaSseClient(
                 "CollectionAdded", "CollectionChanged", "CollectionUpdated", "CollectionDeleted",
                 "ReadListAdded", "ReadListChanged", "ReadListUpdated", "ReadListDeleted",
                 "ReadProgressChanged", "ReadProgressDeleted",
+                "ReadProgressSeriesChanged", "ReadProgressSeriesDeleted",
             )
         ) {
             koharia.connection.ConnectionShelfUpdates.notify(target.sourceId)
@@ -245,6 +262,29 @@ class KomgaSseClient(
                 }
                 scheduleProgressSync(target, bookId)
             }
+            "ReadProgressSeriesChanged", "ReadProgressSeriesDeleted" -> {
+                logcat(LogPriority.DEBUG) {
+                    "Komga SSE: received $type, scheduling full progress sync"
+                }
+                scheduleProgressSync(target, null)
+            }
+        }
+    }
+
+    private fun scheduleReconnect(reason: String) {
+        val scope = appScope ?: return
+        if (!isForeground || !isNetworkConnected || cachedOnlyProvider()) return
+        if (reconnectJob?.isActive == true) return
+
+        val attempt = reconnectAttempt++
+        val delayMillis = reconnectDelayMillis(attempt)
+        logcat(LogPriority.INFO) {
+            "Komga SSE reconnect scheduled in ${delayMillis}ms after $reason"
+        }
+        reconnectJob = scope.launch(Dispatchers.IO) {
+            delay(delayMillis)
+            reconnectJob = null
+            checkAndReconnect()
         }
     }
 
@@ -305,6 +345,11 @@ class KomgaSseClient(
     private companion object {
         const val PROGRESS_SYNC_DEBOUNCE_MS = 300L
     }
+}
+
+internal fun reconnectDelayMillis(attempt: Int): Long {
+    val safeAttempt = attempt.coerceIn(0, 5)
+    return (1_000L shl safeAttempt).coerceAtMost(30_000L)
 }
 
 internal data class KomgaSseConnectionTarget(

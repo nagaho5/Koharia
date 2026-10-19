@@ -26,6 +26,15 @@ class KomgaSseProgressSyncQueueTest {
     }
 
     @Test
+    fun `reconnect backoff is bounded`() {
+        assertEquals(1_000L, reconnectDelayMillis(0))
+        assertEquals(2_000L, reconnectDelayMillis(1))
+        assertEquals(16_000L, reconnectDelayMillis(4))
+        assertEquals(30_000L, reconnectDelayMillis(5))
+        assertEquals(30_000L, reconnectDelayMillis(99))
+    }
+
+    @Test
     fun `clearing queue drops pending full and incremental syncs`() {
         val queue = KomgaSseProgressSyncQueue()
         val target = KomgaSseConnectionTarget(1L, "https://komga.test", generation = 1L)
