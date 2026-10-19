@@ -6,13 +6,13 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.model.SManga
 import koharia.connection.ConnectionEpubProgressAdapter
 import koharia.connection.SharedAppPreferences
-import koharia.domain.manga.model.toDomainManga
-import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.domain.epub.interactor.GetEpubProgress
 import koharia.domain.epub.interactor.GetEpubRemoteProgressCache
 import koharia.domain.epub.interactor.UpsertEpubRemoteProgressCache
 import koharia.domain.epub.model.EpubProgress
 import koharia.domain.epub.model.EpubRemoteProgressCache
+import koharia.domain.manga.model.toDomainManga
+import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.komga.api.dto.KOMGA_LIBRARY_ID_MEMO_KEY
 import koharia.komga.download.KomgaChapterMemo
 import koharia.source.komga.KomgaLibraryClassificationManager
