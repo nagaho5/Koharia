@@ -30,6 +30,7 @@ import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.history.interactor.RemoveHistory
 import tachiyomi.domain.history.interactor.UpsertHistory
 import tachiyomi.domain.history.model.HistoryUpdate
 import tachiyomi.domain.manga.interactor.NetworkToLocalManga
@@ -67,6 +68,9 @@ class KomgaProgressSyncService(
     }
     private val networkToLocalManga by lazy {
         Injekt.get<NetworkToLocalManga>()
+    }
+    private val removeHistory by lazy {
+        Injekt.get<RemoveHistory>()
     }
 
     suspend fun syncFromServer(manga: Manga) {
@@ -399,15 +403,21 @@ class KomgaProgressSyncService(
                 return@forEach
             }
             matchedChapterCount++
-            remote.readProgress?.readDate
-                ?.let(::parseReadDate)
-                ?.let { readAt ->
-                    historyUpdates += HistoryUpdate(
-                        chapterId = localChapter.id,
-                        readAt = readAt,
-                        sessionReadDuration = 0L,
-                    )
-                }
+            if (useBookHistory && remote.readProgress == null) {
+                // A deleted Komga read-progress record must disappear from Book-first
+                // history immediately instead of leaving a stale local history row.
+                removeHistory.await(localManga.id)
+            } else {
+                remote.readProgress?.readDate
+                    ?.let(::parseReadDate)
+                    ?.let { readAt ->
+                        historyUpdates += HistoryUpdate(
+                            chapterId = localChapter.id,
+                            readAt = readAt,
+                            sessionReadDuration = 0L,
+                        )
+                    }
+            }
 
             remote.toChapterUpdate(localChapter)?.let(chapterUpdates::add)
             if (remote.isEpub && remote.readProgress == null) {
