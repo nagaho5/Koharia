@@ -40,6 +40,31 @@ import java.util.UUID
 @OptIn(ExperimentalCoroutinesApi::class, InternalVoyagerApi::class)
 class HistoryScreenModelTest {
     @Test
+    fun `Komga book history mode selects only the requested container shape`() {
+        assertEquals(
+            true,
+            shouldDisplayKomgaHistoryManga(
+                isBookManga = true,
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK,
+            ),
+        )
+        assertEquals(
+            false,
+            shouldDisplayKomgaHistoryManga(
+                isBookManga = false,
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK,
+            ),
+        )
+        assertEquals(
+            true,
+            shouldDisplayKomgaHistoryManga(
+                isBookManga = false,
+                mode = koharia.enhancement.KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES,
+            ),
+        )
+    }
+
+    @Test
     fun `history filters account manga with one scope query per history emission`() = runTest {
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         val fixture = Fixture(setOf(1, 3))

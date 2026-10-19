@@ -12,7 +12,13 @@ import eu.kanade.tachiyomi.util.lang.toLocalDate
 import koharia.connection.ConnectionHistorySyncAdapter
 import koharia.connection.ConnectionPreferences
 import koharia.connection.NO_ACTIVE_CONNECTION
+import koharia.connection.SharedAppPreferences
 import koharia.connection.isConnectionLibraryEntry
+import koharia.enhancement.KohariaEnhancementPreferences
+import koharia.komga.api.dto.KOMGA_LIBRARY_ID_MEMO_KEY
+import koharia.source.komga.KomgaLibraryClassificationManager
+import koharia.source.komga.KomgaLibraryKind
+import koharia.source.komga.KomgaSource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +39,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import logcat.LogPriority
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
@@ -114,7 +122,7 @@ class HistoryScreenModel(
                             if (!scope.isCurrent() || sourceManager.get(scope.sourceId) == null) {
                                 emptyList()
                             } else {
-                                rows.withinScope(allowed)
+                                rows.withinScope(allowed).forKomgaHistoryMode(scope)
                             }
                         }
                         .onStart { emit(emptyList()) }
@@ -242,6 +250,30 @@ class HistoryScreenModel(
 
     private fun List<HistoryWithRelations>.withinScope(allowed: Set<Long>?): List<HistoryWithRelations> =
         if (allowed == null) this else filter { it.mangaId in allowed }
+
+    private suspend fun List<HistoryWithRelations>.forKomgaHistoryMode(
+        scope: HistoryScope,
+    ): List<HistoryWithRelations> {
+        if (sourceManager.get(scope.sourceId) !is KomgaSource) return this
+        val classificationManager = Injekt.get<KomgaLibraryClassificationManager>()
+        if (!classificationManager.enabled.get()) return this
+        val bookLibraryIds = classificationManager.libraryIds(scope.sourceId, KomgaLibraryKind.BOOK)
+        if (bookLibraryIds.isEmpty()) return this
+
+        val mode = Injekt.get<SharedAppPreferences>().enhancementPreferences().komgaBookHistoryMode.get()
+        return filter { row ->
+            val manga = getManga.await(row.mangaId) ?: return@filter true
+            val libraryId = manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]?.jsonPrimitive?.contentOrNull
+            if (libraryId !in bookLibraryIds) {
+                true
+            } else {
+                shouldDisplayKomgaHistoryManga(
+                    isBookManga = manga.url.contains("/api/v1/books/"),
+                    mode = mode,
+                )
+            }
+        }
+    }
 
     private data class HistoryScope(
         val sourceId: Long,
@@ -380,5 +412,13 @@ class HistoryScreenModel(
         data class OpenChapter(val chapter: Chapter?) : Event
         data object InternalError : Event
         data object HistoryCleared : Event
+    }
+}
+
+internal fun shouldDisplayKomgaHistoryManga(isBookManga: Boolean, mode: Int): Boolean {
+    return when (mode) {
+        KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK -> isBookManga
+        KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES -> !isBookManga
+        else -> isBookManga
     }
 }
