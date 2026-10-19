@@ -122,13 +122,21 @@ data class BookMediaDto(
 }
 
 @Serializable
+data class BookMetadataDto(
+    val title: String = "",
+)
+
+@Serializable
 data class BookDto(
     val id: String,
     val seriesId: String = "",
+    val seriesTitle: String = "",
+    val libraryId: String = "",
     val name: String = "",
     val fileLastModified: String? = null,
     val fileHash: String? = null,
     val sizeBytes: Long = 0L,
+    val metadata: BookMetadataDto = BookMetadataDto(),
     val readProgress: BookReadProgressDto? = null,
     val media: BookMediaDto? = null,
 )

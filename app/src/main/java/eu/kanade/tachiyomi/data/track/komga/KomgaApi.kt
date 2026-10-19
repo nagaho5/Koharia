@@ -131,6 +131,9 @@ class KomgaApi(
                         SeriesBookProgress(
                             seriesUrl = url,
                             url = "$baseUrl/api/v1/books/${book.id}",
+                            libraryId = book.libraryId,
+                            bookTitle = book.metadata.title.ifBlank { book.name.substringBeforeLast('.', book.name) },
+                            fileName = book.name,
                             readProgress = book.readProgress,
                             isEpub = book.media?.mediaProfile == "EPUB",
                             isDivinaCompatibleEpub = book.media?.isDivinaCompatibleEpub == true,
@@ -160,6 +163,8 @@ class KomgaApi(
                     seriesUrl = book.seriesId.takeIf(String::isNotBlank)?.let {
                         "${bookUrl.substringBefore("/api/")}/api/v1/series/$it"
                     },
+                    libraryId = book.libraryId,
+                    bookTitle = book.metadata.title.ifBlank { book.name.substringBeforeLast('.', book.name) },
                     readProgress = book.readProgress,
                     pageIndex = book.readProgress?.page?.let { (it - 1).coerceAtLeast(0) },
                     totalPages = book.media?.pagesCount ?: 0,
@@ -221,6 +226,9 @@ class KomgaApi(
                                 SeriesBookProgress(
                                     seriesUrl = "$baseUrl/api/v1/series/${book.seriesId}",
                                     url = "$baseUrl/api/v1/books/${book.id}",
+                                    libraryId = book.libraryId,
+                                    bookTitle = book.metadata.title.ifBlank { book.name.substringBeforeLast('.', book.name) },
+                                    fileName = book.name,
                                     readProgress = book.readProgress,
                                     isEpub = book.media?.mediaProfile == "EPUB",
                                     isDivinaCompatibleEpub = book.media?.isDivinaCompatibleEpub == true,
@@ -334,6 +342,9 @@ class KomgaApi(
     data class SeriesBookProgress(
         val seriesUrl: String? = null,
         val url: String,
+        val libraryId: String = "",
+        val bookTitle: String = "",
+        val fileName: String = "",
         val readProgress: BookReadProgressDto?,
         val isEpub: Boolean = false,
         val isDivinaCompatibleEpub: Boolean = false,
@@ -342,6 +353,8 @@ class KomgaApi(
     data class BookProgressSnapshot(
         val url: String,
         val seriesUrl: String?,
+        val libraryId: String = "",
+        val bookTitle: String = "",
         val readProgress: BookReadProgressDto?,
         val pageIndex: Int?,
         val totalPages: Int,
