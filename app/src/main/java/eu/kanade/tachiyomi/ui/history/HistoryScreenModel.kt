@@ -86,12 +86,6 @@ class HistoryScreenModel(
     private val _events: Channel<Event> = Channel(Channel.UNLIMITED)
     val events: Flow<Event> = _events.receiveAsFlow()
 
-    private val enhancementPreferences = Injekt.get<SharedAppPreferences>().enhancementPreferences()
-    private val historyModeChanges = enhancementPreferences.komgaBookHistoryMode.changes()
-        .onStart { emit(enhancementPreferences.komgaBookHistoryMode.get()) }
-        .distinctUntilChanged()
-        .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
-
     private val historyScopeGeneration = AtomicLong()
     private val historyScopes = combine(
         connectionPreferences.activeConnectionId.changes().distinctUntilChanged(),
@@ -103,6 +97,21 @@ class HistoryScreenModel(
             HistoryScope(sourceId, adapter, historyScopeGeneration.incrementAndGet())
         }
     }.flowOn(Dispatchers.IO)
+        .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
+
+    private val historyModeChanges = historyScopes
+        .flatMapLatest { scope ->
+            if (sourceManager.get(scope.sourceId) is KomgaSource) {
+                val preference = Injekt.get<SharedAppPreferences>()
+                    .enhancementPreferences()
+                    .komgaBookHistoryMode
+                preference.changes()
+                    .onStart { emit(preference.get()) }
+            } else {
+                flowOf(KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES)
+            }
+        }
+        .distinctUntilChanged()
         .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
 
     init {
