@@ -2337,10 +2337,6 @@
     <string name="pref_enhancement_cache_clear_all">Clear all rebuildable cache</string>
     <string name="pref_enhancement_cache_clear_all_summary">Removes only caches that can be recreated. Settings, server credentials, reading data, and the app database are not deleted.</string>
     <string name="pref_enhancement_komga_reader">Komga reading</string>
-    <string name="pref_enhancement_book_history_mode">Single-book library history</string>
-    <string name="pref_enhancement_book_history_summary">For libraries classified as Books, show each Komga book as its own history entry instead of collapsing entries into the containing series.</string>
-    <string name="pref_enhancement_book_history_book">By individual book</string>
-    <string name="pref_enhancement_book_history_series">By series/chapter (original behavior)</string>
     <string name="pref_enhancement_page_cache_size">Page cache size</string>
     <string name="pref_enhancement_cache_auto">Automatic (upstream dynamic sizing)</string>
     <string name="pref_enhancement_page_cache_size_summary">Maximum shared disk cache for comic pages from online sources. Restart the app after changing a fixed size.</string>

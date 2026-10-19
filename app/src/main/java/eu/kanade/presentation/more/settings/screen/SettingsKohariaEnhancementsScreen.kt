@@ -153,17 +153,6 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                 title = stringResource(MR.strings.pref_enhancement_komga_reader),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.ListPreference(
-                        preference = preferences.komgaBookHistoryMode,
-                        entries = persistentMapOf(
-                            KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK to
-                                stringResource(MR.strings.pref_enhancement_book_history_book),
-                            KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES to
-                                stringResource(MR.strings.pref_enhancement_book_history_series),
-                        ),
-                        title = stringResource(MR.strings.pref_enhancement_book_history_mode),
-                        subtitle = "%s\n" + stringResource(MR.strings.pref_enhancement_book_history_summary),
-                    ),
-                    Preference.PreferenceItem.ListPreference(
                         preference = preferences.komgaPrefetchNextPages,
                         entries = persistentMapOf(
                             1 to "1",

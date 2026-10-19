@@ -39,8 +39,6 @@ fun HistoryScreen(
     onClickCover: (mangaId: Long) -> Unit,
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onDialogChange: (HistoryScreenModel.Dialog?) -> Unit,
-    displayTitle: (HistoryWithRelations) -> String = { it.title },
-    showChapterNumber: (HistoryWithRelations) -> Boolean = { true },
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
@@ -86,8 +84,6 @@ fun HistoryScreen(
                     onClickCover = { history -> onClickCover(history.mangaId) },
                     onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
                     onClickDelete = { item -> onDialogChange(HistoryScreenModel.Dialog.Delete(item)) },
-                    displayTitle = displayTitle,
-                    showChapterNumber = showChapterNumber,
                 )
             }
         }
@@ -101,8 +97,6 @@ private fun HistoryScreenContent(
     onClickCover: (HistoryWithRelations) -> Unit,
     onClickResume: (HistoryWithRelations) -> Unit,
     onClickDelete: (HistoryWithRelations) -> Unit,
-    displayTitle: (HistoryWithRelations) -> String,
-    showChapterNumber: (HistoryWithRelations) -> Boolean,
 ) {
     FastScrollLazyColumn(
         contentPadding = contentPadding,
@@ -129,8 +123,6 @@ private fun HistoryScreenContent(
                     HistoryItem(
                         modifier = Modifier.animateItemFastScroll(),
                         history = value,
-                        title = displayTitle(value),
-                        showChapterNumber = showChapterNumber(value),
                         onClickCover = { onClickCover(value) },
                         onClickResume = { onClickResume(value) },
                         onClickDelete = { onClickDelete(value) },

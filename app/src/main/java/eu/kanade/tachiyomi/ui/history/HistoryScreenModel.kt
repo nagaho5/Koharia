@@ -12,14 +12,7 @@ import eu.kanade.tachiyomi.util.lang.toLocalDate
 import koharia.connection.ConnectionHistorySyncAdapter
 import koharia.connection.ConnectionPreferences
 import koharia.connection.NO_ACTIVE_CONNECTION
-import koharia.connection.SharedAppPreferences
 import koharia.connection.isConnectionLibraryEntry
-import koharia.enhancement.KohariaEnhancementPreferences
-import koharia.komga.api.dto.KOMGA_LIBRARY_IDS_MEMO_KEY
-import koharia.komga.api.dto.KOMGA_LIBRARY_ID_MEMO_KEY
-import koharia.source.komga.KomgaLibraryClassificationManager
-import koharia.source.komga.KomgaLibraryKind
-import koharia.source.komga.KomgaSource
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -40,9 +33,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import logcat.LogPriority
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.mapAsCheckboxState
@@ -99,24 +89,9 @@ class HistoryScreenModel(
     }.flowOn(Dispatchers.IO)
         .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
 
-    private val historyModeChanges = historyScopes
-        .flatMapLatest { scope ->
-            if (sourceManager.get(scope.sourceId) is KomgaSource) {
-                val preference = Injekt.get<SharedAppPreferences>()
-                    .enhancementPreferences()
-                    .komgaBookHistoryMode
-                preference.changes()
-                    .onStart { emit(preference.get()) }
-            } else {
-                flowOf(KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES)
-            }
-        }
-        .distinctUntilChanged()
-        .shareIn(screenModelScope, SharingStarted.Eagerly, replay = 1)
-
     init {
         screenModelScope.launchIO {
-            combine(historyScopes, historyModeChanges) { scope, _ -> scope }
+            historyScopes
                 .collectLatest(::syncConnectionHistory)
         }
 
@@ -125,9 +100,8 @@ class HistoryScreenModel(
             combine(
                 state.map { it.searchQuery }.distinctUntilChanged(),
                 historyScopes,
-                historyModeChanges,
-            ) { query, scope, historyMode -> Triple(query, scope, historyMode) }
-                .flatMapLatest { (query, scope, historyMode) ->
+            ) { query, scope -> query to scope }
+                .flatMapLatest { (query, scope) ->
                     val history = if (scope.sourceId == NO_ACTIVE_CONNECTION) {
                         flowOf(emptyList())
                     } else {
@@ -140,7 +114,7 @@ class HistoryScreenModel(
                             if (!scope.isCurrent() || sourceManager.get(scope.sourceId) == null) {
                                 emptyList()
                             } else {
-                                rows.withinScope(allowed).forKomgaHistoryMode(scope, historyMode)
+                                rows.withinScope(allowed)
                             }
                         }
                         .onStart { emit(emptyList()) }
@@ -206,14 +180,7 @@ class HistoryScreenModel(
         screenModelScope.launchIO {
             val scope = currentHistoryScope() ?: return@launchIO
             if (!scope.allows(mangaId)) return@launchIO
-            val manga = getManga.await(mangaId)
-            val chapters = if (manga?.url?.contains("/api/v1/books/") == true) {
-                // A Komga Book materializes as a one-chapter manga. History should always
-                // reopen that book itself, even when Komga currently marks it completed.
-                getNextChapters.await(mangaId, onlyUnread = false)
-            } else {
-                getNextChapters.await(mangaId, chapterId, onlyUnread = false)
-            }
+            val chapters = getNextChapters.await(mangaId, chapterId, onlyUnread = false)
             if (scope.isCurrent()) sendNextChapterEvent(chapters)
         }
     }
@@ -275,45 +242,6 @@ class HistoryScreenModel(
 
     private fun List<HistoryWithRelations>.withinScope(allowed: Set<Long>?): List<HistoryWithRelations> =
         if (allowed == null) this else filter { it.mangaId in allowed }
-
-    private suspend fun List<HistoryWithRelations>.forKomgaHistoryMode(
-        scope: HistoryScope,
-        mode: Int,
-    ): List<HistoryWithRelations> {
-        if (sourceManager.get(scope.sourceId) !is KomgaSource) return this
-        val classificationManager = Injekt.get<KomgaLibraryClassificationManager>()
-        val bookLibraryIds = classificationManager.libraryIds(scope.sourceId, KomgaLibraryKind.BOOK)
-        if (bookLibraryIds.isEmpty()) return this
-
-        return buildList {
-            for (row in this@forKomgaHistoryMode) {
-                val manga = getManga.await(row.mangaId)
-                if (manga == null) {
-                    add(row)
-                    continue
-                }
-                val libraryIds = buildSet {
-                    manga.memo[KOMGA_LIBRARY_ID_MEMO_KEY]
-                        ?.jsonPrimitive
-                        ?.contentOrNull
-                        ?.takeIf(String::isNotBlank)
-                        ?.let(::add)
-                    (manga.memo[KOMGA_LIBRARY_IDS_MEMO_KEY] as? JsonArray)
-                        .orEmpty()
-                        .mapNotNullTo(this) { element ->
-                            element.jsonPrimitive.contentOrNull?.takeIf(String::isNotBlank)
-                        }
-                }
-                val belongsToBookLibrary = libraryIds.any { it in bookLibraryIds }
-                val include = !belongsToBookLibrary ||
-                    shouldDisplayKomgaHistoryManga(
-                        isBookManga = manga.url.contains("/api/v1/books/"),
-                        mode = mode,
-                    )
-                if (include) add(row)
-            }
-        }
-    }
 
     private data class HistoryScope(
         val sourceId: Long,
@@ -452,13 +380,5 @@ class HistoryScreenModel(
         data class OpenChapter(val chapter: Chapter?) : Event
         data object InternalError : Event
         data object HistoryCleared : Event
-    }
-}
-
-internal fun shouldDisplayKomgaHistoryManga(isBookManga: Boolean, mode: Int): Boolean {
-    return when (mode) {
-        KohariaEnhancementPreferences.BOOK_HISTORY_MODE_BOOK -> isBookManga
-        KohariaEnhancementPreferences.BOOK_HISTORY_MODE_SERIES -> !isBookManga
-        else -> isBookManga
     }
 }

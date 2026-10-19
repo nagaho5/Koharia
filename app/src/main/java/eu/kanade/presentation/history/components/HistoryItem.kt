@@ -36,8 +36,6 @@ private val HistoryItemHeight = 96.dp
 @Composable
 fun HistoryItem(
     history: HistoryWithRelations,
-    title: String = history.title,
-    showChapterNumber: Boolean = true,
     onClickCover: () -> Unit,
     onClickResume: () -> Unit,
     onClickDelete: () -> Unit,
@@ -62,7 +60,7 @@ fun HistoryItem(
         ) {
             val textStyle = MaterialTheme.typography.bodyMedium
             Text(
-                text = title,
+                text = history.title,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -70,7 +68,7 @@ fun HistoryItem(
             )
             val readAt = remember { history.readAt?.toTimestampString() ?: "" }
             Text(
-                text = if (showChapterNumber && history.chapterNumber > -1) {
+                text = if (history.chapterNumber > -1) {
                     stringResource(
                         MR.strings.recent_manga_time,
                         formatChapterNumber(history.chapterNumber),

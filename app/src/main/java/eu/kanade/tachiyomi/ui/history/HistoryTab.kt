@@ -29,8 +29,6 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import koharia.connection.SharedAppPreferences
-import koharia.enhancement.simplifyKomgaDisplayTitle
 import koharia.epub.EpubReaderLauncher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -41,8 +39,6 @@ import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.motion.rememberEInkAwareAnimatedVectorPainter
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 data object HistoryTab : Tab {
 
@@ -72,12 +68,6 @@ data object HistoryTab : Tab {
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val epubReaderLauncher = remember { EpubReaderLauncher() }
-        val enhancementPreferences = remember {
-            Injekt.get<SharedAppPreferences>().enhancementPreferences()
-        }
-        val simplifyBookTitles by remember(enhancementPreferences) {
-            enhancementPreferences.simplifyKomgaBookTitles.changes()
-        }.collectAsState(initial = enhancementPreferences.simplifyKomgaBookTitles.get())
         val screenModel = rememberScreenModel { HistoryScreenModel() }
         val state by screenModel.state.collectAsState()
 
@@ -88,19 +78,6 @@ data object HistoryTab : Tab {
             onClickCover = { navigator.push(MangaScreen(it)) },
             onClickResume = screenModel::getNextChapterForManga,
             onDialogChange = screenModel::setDialog,
-            displayTitle = { history ->
-                if (
-                    simplifyBookTitles &&
-                    history.coverData.url?.contains("/api/v1/books/") == true
-                ) {
-                    simplifyKomgaDisplayTitle(history.title)
-                } else {
-                    history.title
-                }
-            },
-            showChapterNumber = { history ->
-                history.coverData.url?.contains("/api/v1/books/") != true
-            },
         )
 
         val onDismissRequest = { screenModel.setDialog(null) }

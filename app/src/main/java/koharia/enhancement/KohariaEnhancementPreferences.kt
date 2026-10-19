@@ -15,9 +15,6 @@ class KohariaEnhancementPreferences(
     val komgaPrefetchPreviousPages: Preference<Int> =
         preferenceStore.getInt("custom_komga_prefetch_previous", DEFAULT_PREFETCH_PREVIOUS)
 
-    val komgaBookHistoryMode: Preference<Int> =
-        preferenceStore.getInt("custom_komga_book_history_mode", BOOK_HISTORY_MODE_BOOK)
-
     val simplifyKomgaBookTitles: Preference<Boolean> =
         preferenceStore.getBoolean("custom_komga_simplify_book_titles", true)
 
@@ -29,8 +26,6 @@ class KohariaEnhancementPreferences(
         const val DEFAULT_PAGE_CACHE_SIZE_MB = 500
         const val DEFAULT_PREFETCH_NEXT = 5
         const val DEFAULT_PREFETCH_PREVIOUS = 3
-        const val BOOK_HISTORY_MODE_BOOK = 0
-        const val BOOK_HISTORY_MODE_SERIES = 1
 
         val PAGE_CACHE_SIZE_OPTIONS_MB = setOf(0, 100, 300, 500, 1024, 2048)
         val PREFETCH_NEXT_OPTIONS = setOf(1, 3, 5, 10, 15, 20)
