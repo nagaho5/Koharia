@@ -227,7 +227,9 @@ class KomgaApi(
                                     seriesUrl = "$baseUrl/api/v1/series/${book.seriesId}",
                                     url = "$baseUrl/api/v1/books/${book.id}",
                                     libraryId = book.libraryId,
-                                    bookTitle = book.metadata.title.ifBlank { book.name.substringBeforeLast('.', book.name) },
+                                    bookTitle = book.metadata.title.ifBlank {
+                                        book.name.substringBeforeLast('.', book.name)
+                                    },
                                     fileName = book.name,
                                     readProgress = book.readProgress,
                                     isEpub = book.media?.mediaProfile == "EPUB",
