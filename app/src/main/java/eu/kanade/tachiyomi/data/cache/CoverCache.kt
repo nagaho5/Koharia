@@ -66,6 +66,12 @@ class CoverCache(private val context: Context) {
         return deleted
     }
 
+    fun sizeBytes(): Long {
+        return cacheDir.walkTopDown()
+            .filter(File::isFile)
+            .sumOf(File::length)
+    }
+
     fun clear(): Int {
         return clearDirectory(cacheDir)
     }

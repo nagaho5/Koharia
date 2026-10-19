@@ -38,6 +38,30 @@ object LocalTempCacheDirectoryProvider {
             .sumOf(::sizeOf)
     }
 
+    fun chapterCacheSize(context: Context): Long = listOf(
+        chapterCacheDir(context),
+        internalChapterCacheDir(context),
+        legacyDirectory(context, CHAPTER_CACHE_DIR),
+    )
+        .distinctBy { it.absolutePath }
+        .sumOf(::sizeOf)
+
+    fun metadataCacheSize(context: Context): Long = currentAndLegacySize(context, METADATA_CACHE_DIR)
+
+    fun epubCacheSize(context: Context): Long = currentAndLegacySize(context, EPUB_CACHE_DIR)
+
+    fun networkCacheSize(context: Context): Long = currentAndLegacySize(context, NETWORK_CACHE_DIR)
+
+    fun downloadIndexCacheSize(context: Context): Long {
+        return listOf(downloadIndexCacheFile(context), legacyFile(context, DOWNLOAD_INDEX_FILE))
+            .distinctBy { it.absolutePath }
+            .sumOf(::sizeOf)
+    }
+
+    fun coilDiskCacheSize(context: Context): Long = currentAndLegacySize(context, COIL_DISK_CACHE_DIR)
+
+    fun sharedImageCacheSize(context: Context): Long = currentAndLegacySize(context, SHARED_IMAGE_DIR)
+
     fun clearMetadataCache(context: Context): Int {
         return clearCurrentAndLegacyDirectory(
             current = metadataCacheDir(context),
@@ -230,6 +254,14 @@ object LocalTempCacheDirectoryProvider {
             deleted += clearDirectoryContents(legacy, recreate = false)
         }
         return deleted
+    }
+
+    private fun currentAndLegacySize(context: Context, name: String): Long {
+        val current = File(rootDir(context), name)
+        val legacy = legacyDirectory(context, name)
+        return listOf(current, legacy)
+            .distinctBy { it.absolutePath }
+            .sumOf(::sizeOf)
     }
 
     private fun countLegacyFiles(context: Context, name: String): Int {

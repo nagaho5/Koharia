@@ -294,6 +294,10 @@ class EpubCacheManager(
 
     fun sizeBytes(): Long = cacheFiles().sumOf(File::length)
 
+    fun maxSizeBytes(): Long = preferences.cacheSizeMb.get()
+        .coerceIn(EpubCachePreferences.MIN_CACHE_SIZE_MB, EpubCachePreferences.MAX_CACHE_SIZE_MB)
+        .toLong() * BYTES_PER_MB
+
     fun readableSize(): String = Formatter.formatFileSize(application, sizeBytes())
 
     private fun trimToSizeLocked() {

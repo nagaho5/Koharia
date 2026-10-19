@@ -122,6 +122,12 @@ class ChapterCache(
     val readableSize: String
         get() = Formatter.formatFileSize(context, realSize)
 
+    val sizeBytes: Long
+        get() = realSize
+
+    val maxSizeBytes: Long
+        get() = diskCache.maxSize
+
     /**
      * Get page list from cache.
      *
