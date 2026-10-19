@@ -58,9 +58,9 @@ import koharia.source.komga.KomgaLibraryScope
 import koharia.source.komga.KomgaSource
 import koharia.source.komga.LibraryFilter
 import koharia.source.komga.OneshotFilter
+import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.ReadFilter
 import koharia.source.komga.ReadingStateGroup
-import koharia.source.komga.RECENTLY_READ_SORT_INDEX
 import koharia.source.komga.SeriesSort
 import koharia.source.komga.TYPE_ALL_INDEX
 import koharia.source.komga.TYPE_BOOKS_INDEX
