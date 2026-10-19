@@ -19,4 +19,20 @@ class KomgaLatestPushedBookDiagnosticsTest {
         assertTrue(summary.contains("IllegalStateException"))
         assertTrue(summary.contains("chapter missing"))
     }
+    @Test
+    fun `current Komga book URL is excluded from reader latest-book selection`() {
+        assertTrue(
+            sameKomgaBookUrl(
+                candidateUrl = "http://server/api/v1/books/current/",
+                excludedBookUrl = "http://server/api/v1/books/current#reader",
+            ),
+        )
+        assertTrue(
+            !sameKomgaBookUrl(
+                candidateUrl = "http://server/api/v1/books/pushed",
+                excludedBookUrl = "http://server/api/v1/books/current",
+            ),
+        )
+    }
+
 }

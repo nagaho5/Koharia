@@ -1336,7 +1336,10 @@ class ReaderActivity : BaseActivity() {
         openingLatestPushedBook = true
         lifecycleScope.launch {
             try {
-                val latest = latestPushedBookResolver.resolveAndPrepare(source)
+                val latest = latestPushedBookResolver.resolveAndPrepare(
+                    source = source,
+                    excludedBookUrl = viewModel.manga?.url,
+                )
                 if (latest == null) {
                     toast(MR.strings.komga_no_recently_read_book)
                     return@launch

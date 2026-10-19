@@ -54,6 +54,7 @@ internal class KomgaLatestPushedBookResolver(
         libraryId: String? = null,
         allowedLibraryIds: Set<String>? = null,
         libraryScope: KomgaLibraryScope = KomgaLibraryScope.ALL,
+        excludedBookUrl: String? = null,
     ): PreparedKomgaLatestBook? = withContext(Dispatchers.IO) {
         val remote = atStage(KomgaLatestBookStage.LOOKUP, null) {
             val filters = source.buildFilterListForLibrary(
@@ -61,7 +62,9 @@ internal class KomgaLatestPushedBookResolver(
                 allowedLibraryIds = allowedLibraryIds,
                 libraryScope = libraryScope,
             ).configureLatestPushedBookQuery()
-            source.getFreshSearchManga(1, "", filters).mangas.firstOrNull()
+            source.getFreshSearchManga(1, "", filters)
+                .mangas
+                .firstOrNull { candidate -> !sameKomgaBookUrl(candidate.url, excludedBookUrl) }
         } ?: return@withContext null
 
         val remoteManga = remote.toDomainManga(source.id)
@@ -145,6 +148,13 @@ internal fun recordKomgaLatestBookFailure(
         diagnostic,
     )
 }
+
+internal fun sameKomgaBookUrl(candidateUrl: String, excludedBookUrl: String?): Boolean {
+    if (excludedBookUrl.isNullOrBlank()) return false
+    return normalizeKomgaBookUrl(candidateUrl) == normalizeKomgaBookUrl(excludedBookUrl)
+}
+
+private fun normalizeKomgaBookUrl(url: String): String = url.substringBefore('#').trimEnd('/')
 
 internal fun komgaLatestBookFailureSummary(error: Throwable): String {
     val failure = error as? KomgaLatestBookException
