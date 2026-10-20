@@ -47,6 +47,8 @@ class PagerPageHolder(
     readerThemedContext: Context,
     val viewer: PagerViewer,
     val slot: PagerSlot.Pages,
+    private var warmupOnly: Boolean = false,
+    private val onWarmupFinished: ((PagerPageHolder) -> Unit)? = null,
 ) : ReaderPageImageView(
     context = readerThemedContext,
     basePreferences = viewer.activity.basePreferences,
@@ -72,6 +74,8 @@ class PagerPageHolder(
     private var displayedPairViews = 0
     private var spreadDisplayed = false
     private var physicalSplitFraction = 0.5f
+    private var skipNextDetachCleanup = false
+    private var warmupFinished = false
 
     init {
         slot.pages.forEach { physicalPage ->
@@ -82,6 +86,10 @@ class PagerPageHolder(
     @SuppressLint("ClickableViewAccessibility")
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        if (skipNextDetachCleanup) {
+            skipNextDetachCleanup = false
+            return
+        }
         loadJobs.forEach(Job::cancel)
         loadJobs.clear()
         renderJob?.cancel()
@@ -89,6 +97,17 @@ class PagerPageHolder(
         clearPairViews()
         recycle()
         scope.cancel()
+    }
+
+    internal fun prepareForWarmupPromotion() {
+        skipNextDetachCleanup = true
+    }
+
+    internal fun promoteFromWarmup() {
+        warmupOnly = false
+        if (spreadDisplayed) {
+            viewer.onTransitionTargetReady(slot)
+        }
     }
 
     fun pageAt(x: Float, y: Float): ReaderPage {
@@ -388,10 +407,7 @@ class PagerPageHolder(
                             container.updateViewport()
                             displayedPairViews++
                             if (displayedPairViews == physicalPages.size && !spreadDisplayed) {
-                                spreadDisplayed = true
-                                progressIndicator?.hide()
-                                viewer.onTransitionTargetReady(slot)
-                                viewer.activity.onPagesDisplayed(slot.pages)
+                                markSpreadDisplayed()
                             }
                         }
                         onImageLoadError = { error -> setError(error, physicalPage) }
@@ -561,16 +577,35 @@ class PagerPageHolder(
     override fun onImageLoaded() {
         super.onImageLoaded()
         if (spreadDisplayed) return
-        spreadDisplayed = true
-        progressIndicator?.hide()
-        viewer.onTransitionTargetReady(slot)
-        viewer.activity.onPagesDisplayed(slot.pages)
+        markSpreadDisplayed()
     }
 
     override fun onImageLoadError(error: Throwable?) {
         super.onImageLoadError(error)
-        viewer.onTransitionTargetFailed(slot)
+        if (warmupOnly) {
+            notifyWarmupFinished()
+        } else {
+            viewer.onTransitionTargetFailed(slot)
+        }
         setError(error, failedPage ?: page)
+    }
+
+    private fun markSpreadDisplayed() {
+        if (spreadDisplayed) return
+        spreadDisplayed = true
+        progressIndicator?.hide()
+        if (warmupOnly) {
+            notifyWarmupFinished()
+        } else {
+            viewer.onTransitionTargetReady(slot)
+            viewer.activity.onPagesDisplayed(slot.pages)
+        }
+    }
+
+    private fun notifyWarmupFinished() {
+        if (warmupFinished) return
+        warmupFinished = true
+        onWarmupFinished?.invoke(this)
     }
 
     override fun onScaleChanged(newScale: Float) {

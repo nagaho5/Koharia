@@ -68,9 +68,20 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
      */
     private val adapter = PagerViewerAdapter(this)
 
+    private val renderWarmupContainer = FrameLayout(activity).apply {
+        visibility = View.INVISIBLE
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+    }
+
     private val viewerContainer = FrameLayout(activity).apply {
         addView(
             pager,
+            FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
+        )
+        addView(
+            renderWarmupContainer,
             FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
         )
     }
@@ -343,6 +354,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         pendingPageSplits.clear()
         cancelPendingPageTurn(reactivateCurrent = false)
         pageFlipController.cancel()
+        adapter.clearRenderWarmups()
         super.destroy()
         scope.cancel()
     }
@@ -362,6 +374,31 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
     override fun getView(): View {
         return viewerContainer
     }
+
+    internal fun attachRenderWarmupHolder(holder: PagerPageHolder) {
+        if (holder.parent === renderWarmupContainer) return
+        renderWarmupContainer.addView(
+            holder,
+            FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT),
+        )
+    }
+
+    internal fun detachRenderWarmupHolderForPromotion(holder: PagerPageHolder) {
+        if (holder.parent !== renderWarmupContainer) return
+        holder.prepareForWarmupPromotion()
+        renderWarmupContainer.removeView(holder)
+    }
+
+    internal fun releaseRenderWarmupHolder(holder: PagerPageHolder) {
+        if (holder.parent === renderWarmupContainer) {
+            renderWarmupContainer.removeView(holder)
+        }
+    }
+
+    internal fun attachedPageSlots(): Set<PagerSlot.Pages> =
+        pager.children
+            .filterIsInstance(PagerPageHolder::class.java)
+            .mapTo(linkedSetOf(), PagerPageHolder::slot)
 
     /**
      * Returns the PagerPageHolder for the provided page
@@ -444,6 +481,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
                 }
                 is PagerSlot.Transition -> onTransitionSelected(slot.transition)
             }
+            adapter.updateRenderWarmupWindow(position)
         }
     }
 
@@ -780,7 +818,8 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
     }
 
     private fun isSlotRendered(slot: PagerSlot.Pages): Boolean =
-        getPageHolder(slot.progressPage)?.isTransitionTargetReady() == true
+        getPageHolder(slot.progressPage)?.isTransitionTargetReady() == true ||
+            adapter.isWarmSlotReady(slot)
 
     private fun markPendingUserNavigation(target: Int) {
         if (target in adapter.slots.indices) {

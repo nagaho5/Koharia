@@ -15,6 +15,15 @@ class KohariaEnhancementPreferences(
     val komgaPrefetchPreviousPages: Preference<Int> =
         preferenceStore.getInt("custom_komga_prefetch_previous", DEFAULT_PREFETCH_PREVIOUS)
 
+    val renderWarmupForwardPages: Preference<Int> =
+        preferenceStore.getInt("custom_reader_render_warmup_forward", DEFAULT_RENDER_WARMUP_FORWARD)
+
+    val renderWarmupBackwardPages: Preference<Int> =
+        preferenceStore.getInt("custom_reader_render_warmup_backward", DEFAULT_RENDER_WARMUP_BACKWARD)
+
+    val renderWarmupConcurrency: Preference<Int> =
+        preferenceStore.getInt("custom_reader_render_warmup_concurrency", DEFAULT_RENDER_WARMUP_CONCURRENCY)
+
     val simplifyKomgaBookTitles: Preference<Boolean> =
         preferenceStore.getBoolean("custom_komga_simplify_book_titles", true)
 
@@ -59,6 +68,9 @@ class KohariaEnhancementPreferences(
         const val DEFAULT_PAGE_CACHE_SIZE_MB = 500
         const val DEFAULT_PREFETCH_NEXT = 5
         const val DEFAULT_PREFETCH_PREVIOUS = 3
+        const val DEFAULT_RENDER_WARMUP_FORWARD = 3
+        const val DEFAULT_RENDER_WARMUP_BACKWARD = 1
+        const val DEFAULT_RENDER_WARMUP_CONCURRENCY = 2
         const val DEFAULT_READER_OVERLAY_BACKGROUND_OPACITY_PERCENT = 50
         const val DEFAULT_READER_OVERLAY_CONTENT_PADDING_DP = 1
         const val DEFAULT_BOTTOM_SEEK_TRIGGER_HEIGHT_DP = 40
@@ -66,8 +78,8 @@ class KohariaEnhancementPreferences(
         const val DEFAULT_BOTTOM_SEEK_MINIMUM_PAGES_PER_SCREEN = 50
 
         val PAGE_CACHE_SIZE_OPTIONS_MB = setOf(0, 100, 300, 500, 1024, 2048)
-        val PREFETCH_NEXT_OPTIONS = setOf(1, 3, 5, 10, 15, 20)
-        val PREFETCH_PREVIOUS_OPTIONS = setOf(0, 1, 3, 5)
+        val PREFETCH_NEXT_OPTIONS = (1..100).toSet()
+        val PREFETCH_PREVIOUS_OPTIONS = (0..50).toSet()
 
         fun normalizedPageCacheSizeMb(value: Int): Int =
             value.takeIf(PAGE_CACHE_SIZE_OPTIONS_MB::contains) ?: DEFAULT_PAGE_CACHE_SIZE_MB
@@ -77,6 +89,12 @@ class KohariaEnhancementPreferences(
 
         fun normalizedPrefetchPrevious(value: Int): Int =
             value.takeIf(PREFETCH_PREVIOUS_OPTIONS::contains) ?: DEFAULT_PREFETCH_PREVIOUS
+
+        fun normalizedRenderWarmupForward(value: Int): Int = value.coerceIn(1, 10)
+
+        fun normalizedRenderWarmupBackward(value: Int): Int = value.coerceIn(0, 3)
+
+        fun normalizedRenderWarmupConcurrency(value: Int): Int = value.coerceIn(1, 5)
 
         fun normalizedReaderOverlayBackgroundOpacityPercent(value: Int): Int = value.coerceIn(0, 100)
 

@@ -10,7 +10,11 @@ import eu.kanade.tachiyomi.ui.reader.model.ViewerChapters
 import eu.kanade.tachiyomi.ui.reader.viewer.calculateChapterGap
 import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.widget.ViewPagerAdapter
+import koharia.connection.SharedAppPreferences
+import koharia.enhancement.KohariaEnhancementPreferences
 import tachiyomi.core.common.util.system.logcat
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
 
@@ -26,6 +30,13 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     var currentChapter: ReaderChapter? = null
 
     private var readerThemedContext = viewer.activity.createReaderThemeContext()
+    private val enhancementPreferences by lazy {
+        Injekt.get<SharedAppPreferences>().enhancementPreferences()
+    }
+    private val renderWarmHolders = linkedMapOf<PagerSlot.Pages, PagerPageHolder>()
+    private val activeRenderWarmups = linkedSetOf<PagerSlot.Pages>()
+    private var desiredRenderWarmSlots = emptyList<PagerSlot.Pages>()
+    private var renderWarmupConcurrency = KohariaEnhancementPreferences.DEFAULT_RENDER_WARMUP_CONCURRENCY
 
     fun setChapters(
         chapters: ViewerChapters,
@@ -73,7 +84,8 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
 
     override fun createView(container: ViewGroup, position: Int): View {
         return when (val slot = slots[position]) {
-            is PagerSlot.Pages -> PagerPageHolder(readerThemedContext, viewer, slot)
+            is PagerSlot.Pages -> takeRenderWarmHolder(slot)
+                ?: PagerPageHolder(readerThemedContext, viewer, slot)
             is PagerSlot.Transition -> PagerTransitionHolder(readerThemedContext, viewer, slot.transition)
         }
     }
@@ -99,6 +111,7 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     }
 
     fun rebuildSlots(anchor: ReaderPage? = currentSlot()?.let(::anchorPage)) {
+        clearRenderWarmups()
         slots = resolvedSlots().toMutableList()
         notifyDataSetChanged()
 
@@ -140,7 +153,112 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     }
 
     fun refresh() {
+        clearRenderWarmups()
         readerThemedContext = viewer.activity.createReaderThemeContext()
+    }
+
+    fun updateRenderWarmupWindow(currentPosition: Int) {
+        val current = slots.getOrNull(currentPosition) as? PagerSlot.Pages ?: run {
+            clearRenderWarmups()
+            return
+        }
+        val forwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupForward(
+            enhancementPreferences.renderWarmupForwardPages.get(),
+        )
+        val backwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupBackward(
+            enhancementPreferences.renderWarmupBackwardPages.get(),
+        )
+        renderWarmupConcurrency = KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(
+            enhancementPreferences.renderWarmupConcurrency.get(),
+        )
+
+        val chapter = current.first.chapter
+        fun collect(step: Int, count: Int): List<PagerSlot.Pages> {
+            if (count <= 0) return emptyList()
+            val result = mutableListOf<PagerSlot.Pages>()
+            var position = currentPosition + step
+            while (position in slots.indices && result.size < count) {
+                val candidate = slots[position] as? PagerSlot.Pages ?: break
+                if (candidate.pages.any { it.chapter !== chapter }) break
+                if (
+                    viewer.config.doublePages &&
+                    candidate.pages.any { it.spreadKind == ReaderPage.SpreadKind.UNKNOWN }
+                ) {
+                    break
+                }
+                result += candidate
+                position += step
+            }
+            return result
+        }
+
+        val forwardStep = if (viewer is R2LPagerViewer) -1 else 1
+        val forward = collect(forwardStep, forwardCount)
+        val backward = collect(-forwardStep, backwardCount)
+        desiredRenderWarmSlots = forward + backward
+
+        val desired = desiredRenderWarmSlots.toSet()
+        renderWarmHolders.keys
+            .filterNot(desired::contains)
+            .toList()
+            .forEach(::releaseRenderWarmHolder)
+
+        pumpRenderWarmups()
+        viewer.pager.post(::pumpRenderWarmups)
+    }
+
+    fun isWarmSlotReady(slot: PagerSlot.Pages): Boolean =
+        renderWarmHolders[slot]?.isTransitionTargetReady() == true
+
+    fun clearRenderWarmups() {
+        desiredRenderWarmSlots = emptyList()
+        activeRenderWarmups.clear()
+        renderWarmHolders.values.toList().forEach(viewer::releaseRenderWarmupHolder)
+        renderWarmHolders.clear()
+    }
+
+    private fun takeRenderWarmHolder(slot: PagerSlot.Pages): PagerPageHolder? {
+        val holder = renderWarmHolders.remove(slot) ?: return null
+        activeRenderWarmups.remove(slot)
+        viewer.detachRenderWarmupHolderForPromotion(holder)
+        holder.promoteFromWarmup()
+        pumpRenderWarmups()
+        return holder
+    }
+
+    private fun releaseRenderWarmHolder(slot: PagerSlot.Pages) {
+        activeRenderWarmups.remove(slot)
+        renderWarmHolders.remove(slot)?.let(viewer::releaseRenderWarmupHolder)
+    }
+
+    private fun pumpRenderWarmups() {
+        if (desiredRenderWarmSlots.isEmpty()) return
+        val attached = viewer.attachedPageSlots()
+        val availableSlots = desiredRenderWarmSlots.asSequence()
+            .filterNot(attached::contains)
+            .filterNot(renderWarmHolders::containsKey)
+            .iterator()
+
+        while (activeRenderWarmups.size < renderWarmupConcurrency && availableSlots.hasNext()) {
+            val slot = availableSlots.next()
+            val holder = PagerPageHolder(
+                readerThemedContext = readerThemedContext,
+                viewer = viewer,
+                slot = slot,
+                warmupOnly = true,
+                onWarmupFinished = ::onRenderWarmupFinished,
+            )
+            renderWarmHolders[slot] = holder
+            activeRenderWarmups += slot
+            viewer.attachRenderWarmupHolder(holder)
+        }
+    }
+
+    private fun onRenderWarmupFinished(holder: PagerPageHolder) {
+        val slot = holder.slot
+        if (renderWarmHolders[slot] !== holder) return
+        activeRenderWarmups.remove(slot)
+        pumpRenderWarmups()
     }
 
     private fun buildSinglePageSlots(): List<PagerSlot> = sourceItems.map { item ->

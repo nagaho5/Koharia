@@ -13,6 +13,9 @@ class KohariaEnhancementPreferencesTest {
         preferences.comicPageCacheSizeMb.get() shouldBe 500
         preferences.komgaPrefetchNextPages.get() shouldBe 5
         preferences.komgaPrefetchPreviousPages.get() shouldBe 3
+        preferences.renderWarmupForwardPages.get() shouldBe 3
+        preferences.renderWarmupBackwardPages.get() shouldBe 1
+        preferences.renderWarmupConcurrency.get() shouldBe 2
         preferences.rapidTapPaging.get() shouldBe false
         preferences.readerOverlayBackgroundOpacityPercent.get() shouldBe 50
         preferences.readerOverlayContentPaddingDp.get() shouldBe 1
@@ -25,8 +28,16 @@ class KohariaEnhancementPreferencesTest {
     @Test
     fun `unsupported stored values fall back to safe defaults`() {
         KohariaEnhancementPreferences.normalizedPageCacheSizeMb(777) shouldBe 500
-        KohariaEnhancementPreferences.normalizedPrefetchNext(9) shouldBe 5
-        KohariaEnhancementPreferences.normalizedPrefetchPrevious(2) shouldBe 3
+        KohariaEnhancementPreferences.normalizedPrefetchNext(0) shouldBe 5
+        KohariaEnhancementPreferences.normalizedPrefetchNext(101) shouldBe 5
+        KohariaEnhancementPreferences.normalizedPrefetchPrevious(-1) shouldBe 3
+        KohariaEnhancementPreferences.normalizedPrefetchPrevious(51) shouldBe 3
+        KohariaEnhancementPreferences.normalizedRenderWarmupForward(0) shouldBe 1
+        KohariaEnhancementPreferences.normalizedRenderWarmupForward(11) shouldBe 10
+        KohariaEnhancementPreferences.normalizedRenderWarmupBackward(-1) shouldBe 0
+        KohariaEnhancementPreferences.normalizedRenderWarmupBackward(4) shouldBe 3
+        KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(0) shouldBe 1
+        KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(6) shouldBe 5
         KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(-1) shouldBe 0
         KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(101) shouldBe 100
         KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(-1) shouldBe 0

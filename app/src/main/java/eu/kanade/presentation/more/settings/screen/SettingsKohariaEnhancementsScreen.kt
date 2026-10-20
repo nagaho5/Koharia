@@ -166,29 +166,70 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.pref_enhancement_komga_reader),
                 preferenceItems = persistentListOf(
-                    Preference.PreferenceItem.ListPreference(
-                        preference = preferences.komgaPrefetchNextPages,
-                        entries = persistentMapOf(
-                            1 to "1",
-                            3 to "3",
-                            5 to "5",
-                            10 to "10",
-                            15 to "15",
-                            20 to "20",
-                        ),
+                    Preference.PreferenceItem.CustomPreference(
                         title = stringResource(MR.strings.pref_enhancement_prefetch_next),
-                        subtitle = "%s\n" + stringResource(MR.strings.pref_enhancement_prefetch_next_summary),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.komgaPrefetchNextPages,
+                                title = stringResource(MR.strings.pref_enhancement_prefetch_next),
+                                summary = stringResource(MR.strings.pref_enhancement_prefetch_next_summary),
+                                range = 1..100,
+                                suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
+                            )
+                        },
                     ),
-                    Preference.PreferenceItem.ListPreference(
-                        preference = preferences.komgaPrefetchPreviousPages,
-                        entries = persistentMapOf(
-                            0 to stringResource(MR.strings.off),
-                            1 to "1",
-                            3 to "3",
-                            5 to "5",
-                        ),
+                    Preference.PreferenceItem.CustomPreference(
                         title = stringResource(MR.strings.pref_enhancement_prefetch_previous),
-                        subtitle = "%s\n" + stringResource(MR.strings.pref_enhancement_prefetch_previous_summary),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.komgaPrefetchPreviousPages,
+                                title = stringResource(MR.strings.pref_enhancement_prefetch_previous),
+                                summary = stringResource(MR.strings.pref_enhancement_prefetch_previous_summary),
+                                range = 0..50,
+                                suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
+                            )
+                        },
+                    ),
+                ),
+            ),
+            Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_render_warmup),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_render_warmup_forward),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.renderWarmupForwardPages,
+                                title = stringResource(MR.strings.pref_enhancement_render_warmup_forward),
+                                summary = stringResource(MR.strings.pref_enhancement_render_warmup_forward_summary),
+                                range = 1..10,
+                                suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_render_warmup_backward),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.renderWarmupBackwardPages,
+                                title = stringResource(MR.strings.pref_enhancement_render_warmup_backward),
+                                summary = stringResource(MR.strings.pref_enhancement_render_warmup_backward_summary),
+                                range = 0..3,
+                                suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.renderWarmupConcurrency,
+                                title = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency),
+                                summary = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency_summary),
+                                range = 1..5,
+                                suffix = "",
+                            )
+                        },
                     ),
                 ),
             ),
