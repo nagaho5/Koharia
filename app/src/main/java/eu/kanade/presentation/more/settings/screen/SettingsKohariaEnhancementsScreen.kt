@@ -29,11 +29,11 @@ import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
-import tachiyomi.core.common.preference.Preference as PreferenceData
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import tachiyomi.core.common.preference.Preference as PreferenceData
 
 object SettingsKohariaEnhancementsScreen : SearchableSettings {
 
