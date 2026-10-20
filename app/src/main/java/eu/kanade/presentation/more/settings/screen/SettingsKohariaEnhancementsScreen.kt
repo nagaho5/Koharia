@@ -259,7 +259,9 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 title = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity),
                                 summary = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity_summary),
                                 range = 1..1000,
-                                suffix = stringResource(MR.strings.pref_enhancement_bottom_seek_percent_per_screen_unit),
+                                suffix = stringResource(
+                                    MR.strings.pref_enhancement_bottom_seek_percent_per_screen_unit,
+                                ),
                             )
                         },
                     ),
