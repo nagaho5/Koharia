@@ -14,12 +14,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -497,6 +500,22 @@ data class KomgaLibraryScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     scale = true,
                 )
+                if (state.isServerConfigured && !screenModel.cachedOnly) {
+                    ExtendedFloatingActionButton(
+                        text = { Text(stringResource(MR.strings.komga_open_latest_pushed)) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.History,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = ::openLatestPushedBook,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 20.dp)
+                            .offset(y = 72.dp),
+                    )
+                }
             }
         }
 

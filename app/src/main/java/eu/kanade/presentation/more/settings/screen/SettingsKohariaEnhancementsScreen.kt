@@ -246,8 +246,32 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 preference = preferences.bottomSeekTriggerHeightDp,
                                 title = stringResource(MR.strings.pref_enhancement_bottom_seek_height),
                                 summary = stringResource(MR.strings.pref_enhancement_bottom_seek_height_summary),
-                                range = 10..100,
+                                range = 10..200,
                                 suffix = " dp",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.bottomSeekSensitivityPercent,
+                                title = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity),
+                                summary = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity_summary),
+                                range = 1..1000,
+                                suffix = "% / screen",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_bottom_seek_minimum_span),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.bottomSeekMinimumPagesPerScreen,
+                                title = stringResource(MR.strings.pref_enhancement_bottom_seek_minimum_span),
+                                summary = stringResource(MR.strings.pref_enhancement_bottom_seek_minimum_span_summary),
+                                range = 1..10_000,
+                                suffix = " pages / screen",
                             )
                         },
                     ),

@@ -65,7 +65,13 @@ class PagerTransitionHolder(
         addView(transitionView)
         addView(pagesContainer)
 
-        transitionView.bind(transition, viewer.downloadManager, viewer.activity.viewModel.manga)
+        transitionView.bind(
+            transition = transition,
+            downloadManager = viewer.downloadManager,
+            manga = viewer.activity.viewModel.manga,
+            onOpenLatestPushed = viewer.activity::openLatestPushedBookFromBoundary
+                .takeIf { viewer.activity.supportsLatestPushedBookFromBoundary() },
+        )
 
         transition.to?.let(::observeStatus)
     }

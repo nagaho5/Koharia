@@ -26,7 +26,12 @@ class ReaderTransitionView @JvmOverloads constructor(context: Context, attrs: At
         layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
     }
 
-    fun bind(transition: ChapterTransition, downloadManager: DownloadManager, manga: Manga?) {
+    fun bind(
+        transition: ChapterTransition,
+        downloadManager: DownloadManager,
+        manga: Manga?,
+        onOpenLatestPushed: (() -> Unit)? = null,
+    ) {
         data = if (manga != null) {
             Data(
                 transition = transition,
@@ -41,6 +46,7 @@ class ReaderTransitionView @JvmOverloads constructor(context: Context, attrs: At
                         skipCache = true,
                     )
                 } ?: false,
+                onOpenLatestPushed = onOpenLatestPushed,
             )
         } else {
             null
@@ -59,6 +65,7 @@ class ReaderTransitionView @JvmOverloads constructor(context: Context, attrs: At
                         transition = it.transition,
                         currChapterDownloaded = it.currChapterDownloaded,
                         goingToChapterDownloaded = it.goingToChapterDownloaded,
+                        onOpenLatestPushed = it.onOpenLatestPushed,
                     )
                 }
             }
@@ -69,5 +76,6 @@ class ReaderTransitionView @JvmOverloads constructor(context: Context, attrs: At
         val transition: ChapterTransition,
         val currChapterDownloaded: Boolean,
         val goingToChapterDownloaded: Boolean,
+        val onOpenLatestPushed: (() -> Unit)?,
     )
 }

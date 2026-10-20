@@ -18,6 +18,8 @@ class KohariaEnhancementPreferencesTest {
         preferences.readerOverlayContentPaddingDp.get() shouldBe 1
         preferences.bottomSeekEnabled.get() shouldBe true
         preferences.bottomSeekTriggerHeightDp.get() shouldBe 40
+        preferences.bottomSeekSensitivityPercent.get() shouldBe 300
+        preferences.bottomSeekMinimumPagesPerScreen.get() shouldBe 50
     }
 
     @Test
@@ -30,7 +32,11 @@ class KohariaEnhancementPreferencesTest {
         KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(-1) shouldBe 0
         KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(11) shouldBe 10
         KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(9) shouldBe 10
-        KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(101) shouldBe 100
+        KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(201) shouldBe 200
+        KohariaEnhancementPreferences.normalizedBottomSeekSensitivityPercent(0) shouldBe 1
+        KohariaEnhancementPreferences.normalizedBottomSeekSensitivityPercent(1001) shouldBe 1000
+        KohariaEnhancementPreferences.normalizedBottomSeekMinimumPagesPerScreen(0) shouldBe 1
+        KohariaEnhancementPreferences.normalizedBottomSeekMinimumPagesPerScreen(10_001) shouldBe 10_000
     }
 
     @Test

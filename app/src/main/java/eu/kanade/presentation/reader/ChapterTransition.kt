@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,35 +53,60 @@ fun ChapterTransition(
     transition: ChapterTransition,
     currChapterDownloaded: Boolean,
     goingToChapterDownloaded: Boolean,
+    onOpenLatestPushed: (() -> Unit)? = null,
 ) {
     val currChapter = transition.from.chapter.toDomainChapter()
     val goingToChapter = transition.to?.chapter?.toDomainChapter()
 
     ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-        when (transition) {
-            is ChapterTransition.Prev -> {
-                TransitionText(
-                    topLabel = stringResource(MR.strings.transition_previous),
-                    topChapter = goingToChapter,
-                    topChapterDownloaded = goingToChapterDownloaded,
-                    bottomLabel = stringResource(MR.strings.transition_current),
-                    bottomChapter = currChapter,
-                    bottomChapterDownloaded = currChapterDownloaded,
-                    fallbackLabel = stringResource(MR.strings.transition_no_previous),
-                    chapterGap = calculateChapterGap(currChapter, goingToChapter),
-                )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            when (transition) {
+                is ChapterTransition.Prev -> {
+                    TransitionText(
+                        topLabel = stringResource(MR.strings.transition_previous),
+                        topChapter = goingToChapter,
+                        topChapterDownloaded = goingToChapterDownloaded,
+                        bottomLabel = stringResource(MR.strings.transition_current),
+                        bottomChapter = currChapter,
+                        bottomChapterDownloaded = currChapterDownloaded,
+                        fallbackLabel = stringResource(MR.strings.transition_no_previous),
+                        chapterGap = calculateChapterGap(currChapter, goingToChapter),
+                    )
+                }
+                is ChapterTransition.Next -> {
+                    TransitionText(
+                        topLabel = stringResource(MR.strings.transition_finished),
+                        topChapter = currChapter,
+                        topChapterDownloaded = currChapterDownloaded,
+                        bottomLabel = stringResource(MR.strings.transition_next),
+                        bottomChapter = goingToChapter,
+                        bottomChapterDownloaded = goingToChapterDownloaded,
+                        fallbackLabel = stringResource(MR.strings.transition_no_next),
+                        chapterGap = calculateChapterGap(goingToChapter, currChapter),
+                    )
+                }
             }
-            is ChapterTransition.Next -> {
-                TransitionText(
-                    topLabel = stringResource(MR.strings.transition_finished),
-                    topChapter = currChapter,
-                    topChapterDownloaded = currChapterDownloaded,
-                    bottomLabel = stringResource(MR.strings.transition_next),
-                    bottomChapter = goingToChapter,
-                    bottomChapterDownloaded = goingToChapterDownloaded,
-                    fallbackLabel = stringResource(MR.strings.transition_no_next),
-                    chapterGap = calculateChapterGap(goingToChapter, currChapter),
-                )
+
+            if (transition.to == null && onOpenLatestPushed != null) {
+                Spacer(Modifier.height(32.dp))
+                Button(
+                    onClick = onOpenLatestPushed,
+                    modifier = Modifier
+                        .widthIn(min = 240.dp, max = 360.dp)
+                        .heightIn(min = 64.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.History,
+                        contentDescription = null,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(MR.strings.komga_open_latest_pushed),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         }
     }

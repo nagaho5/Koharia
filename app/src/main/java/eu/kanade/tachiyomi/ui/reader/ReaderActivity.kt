@@ -15,7 +15,10 @@ import android.graphics.Paint
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -109,6 +112,7 @@ import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import koharia.connection.SharedAppPreferences
 import koharia.document.toDocumentRenderSettings
+import koharia.enhancement.BottomSeekPolicy
 import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.epub.DocumentBookInfoDialog
 import koharia.epub.EpubBottomPanel
@@ -323,13 +327,24 @@ class ReaderActivity : BaseActivity() {
 
     private val sliderPageSeek by lazy { ReaderPageSeek(lifecycleScope) }
     private val bottomSeekTouchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+    private val bottomSeekLongPressHandler = Handler(Looper.getMainLooper())
+    private val bottomSeekLongPressDelayMillis =
+        (ViewConfiguration.getLongPressTimeout().toLong() - 75L).coerceAtLeast(1L)
     private var bottomSeekCandidate = false
     private var bottomSeekDragging = false
+    private var bottomSeekMoved = false
     private var bottomSeekDownX = 0f
     private var bottomSeekDownY = 0f
+    private var bottomSeekDownTime = 0L
+    private var bottomSeekAnchorIndex = -1
     private var bottomSeekTargetIndex = -1
     private var bottomSeekVisible by mutableStateOf(false)
     private var bottomSeekProgress by mutableStateOf(0f)
+    private val bottomSeekLongPressRunnable = Runnable {
+        if (!bottomSeekCandidate || bottomSeekDragging || !canContinueBottomSeek()) return@Runnable
+        beginBottomSeek()
+        binding.root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+    }
 
     /**
      * Called when the activity is created. Initializes the presenter and configuration.
@@ -748,6 +763,7 @@ class ReaderActivity : BaseActivity() {
             }
 
             config = null
+            bottomSeekLongPressHandler.removeCallbacks(bottomSeekLongPressRunnable)
             menuToggleToast?.cancel()
             readingModeToast?.cancel()
         } finally {
@@ -880,7 +896,11 @@ class ReaderActivity : BaseActivity() {
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    updateBottomSeek(event.x, finished = true)
+                    if (bottomSeekMoved) {
+                        updateBottomSeek(event.x, finished = true)
+                    } else {
+                        sliderPageSeek.cancel()
+                    }
                     resetBottomSeekGesture()
                     return true
                 }
@@ -898,13 +918,18 @@ class ReaderActivity : BaseActivity() {
                 bottomSeekCandidate = true
                 bottomSeekDownX = event.x
                 bottomSeekDownY = event.y
+                bottomSeekDownTime = event.downTime
+                bottomSeekLongPressHandler.postDelayed(
+                    bottomSeekLongPressRunnable,
+                    bottomSeekLongPressDelayMillis,
+                )
             }
             return super.dispatchTouchEvent(event)
         }
 
         if (bottomSeekCandidate) {
             if (event.pointerCount > 1) {
-                bottomSeekCandidate = false
+                cancelBottomSeekCandidate()
                 return super.dispatchTouchEvent(event)
             }
             when (event.actionMasked) {
@@ -912,21 +937,17 @@ class ReaderActivity : BaseActivity() {
                     val dx = event.x - bottomSeekDownX
                     val dy = event.y - bottomSeekDownY
                     if (abs(dy) > bottomSeekTouchSlop && abs(dy) > abs(dx)) {
-                        bottomSeekCandidate = false
+                        cancelBottomSeekCandidate()
                         return super.dispatchTouchEvent(event)
                     }
                     if (abs(dx) > bottomSeekTouchSlop && abs(dx) >= abs(dy)) {
-                        bottomSeekDragging = true
-                        bottomSeekVisible = true
-                        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
-                        super.dispatchTouchEvent(cancel)
-                        cancel.recycle()
+                        beginBottomSeek()
                         updateBottomSeek(event.x, finished = false)
                         return true
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    bottomSeekCandidate = false
+                    cancelBottomSeekCandidate()
                 }
             }
         }
@@ -945,32 +966,83 @@ class ReaderActivity : BaseActivity() {
         return event.y >= binding.root.height - triggerHeightPx
     }
 
+    private fun canContinueBottomSeek(): Boolean {
+        if (!::binding.isInitialized || useEpubSettings || viewModel.state.value.menuVisible) return false
+        if (!enhancementPreferences.bottomSeekEnabled.get()) return false
+        return viewModel.state.value.totalPages > 1
+    }
+
+    private fun beginBottomSeek() {
+        if (!bottomSeekCandidate || bottomSeekDragging) return
+        val state = viewModel.state.value
+        val totalPages = state.totalPages
+        if (totalPages <= 1) return
+
+        bottomSeekLongPressHandler.removeCallbacks(bottomSeekLongPressRunnable)
+        bottomSeekCandidate = false
+        bottomSeekDragging = true
+        bottomSeekMoved = false
+        bottomSeekAnchorIndex = (state.currentPage.coerceAtLeast(1) - 1).coerceIn(0, totalPages - 1)
+        bottomSeekTargetIndex = bottomSeekAnchorIndex
+        bottomSeekProgress = bottomSeekAnchorIndex.toFloat() / (totalPages - 1).toFloat()
+        bottomSeekVisible = true
+        cancelViewerTouch()
+    }
+
+    private fun cancelViewerTouch() {
+        val cancel = MotionEvent.obtain(
+            bottomSeekDownTime,
+            SystemClock.uptimeMillis(),
+            MotionEvent.ACTION_CANCEL,
+            bottomSeekDownX,
+            bottomSeekDownY,
+            0,
+        )
+        super.dispatchTouchEvent(cancel)
+        cancel.recycle()
+    }
+
     private fun updateBottomSeek(x: Float, finished: Boolean) {
         val state = viewModel.state.value
         val totalPages = state.totalPages
         val width = binding.root.width
-        if (totalPages <= 1 || width <= 0) return
+        if (totalPages <= 1 || width <= 0 || bottomSeekAnchorIndex < 0) return
 
-        val visualProgress = (x / width.toFloat()).coerceIn(0f, 1f)
-        val logicalProgress = if (state.viewer is R2LPagerViewer) 1f - visualProgress else visualProgress
-        val index = (logicalProgress * (totalPages - 1)).roundToInt().coerceIn(0, totalPages - 1)
+        val dragFraction = (x - bottomSeekDownX) / width.toFloat()
+        val index = BottomSeekPolicy.targetIndex(
+            anchorIndex = bottomSeekAnchorIndex,
+            dragFraction = dragFraction,
+            totalPages = totalPages,
+            sensitivityPercent = enhancementPreferences.bottomSeekSensitivityPercent.get(),
+            minimumPagesPerScreen = enhancementPreferences.bottomSeekMinimumPagesPerScreen.get(),
+            rightToLeft = state.viewer is R2LPagerViewer,
+        )
+        bottomSeekMoved = bottomSeekMoved || index != bottomSeekAnchorIndex
         bottomSeekTargetIndex = index
-        bottomSeekProgress = logicalProgress
+        bottomSeekProgress = index.toFloat() / (totalPages - 1).toFloat()
         seekToPageIndex(index, finished = finished, allowMenuHidden = true)
     }
 
     private fun finishBottomSeek() {
         val index = bottomSeekTargetIndex
-        if (index >= 0) {
+        if (bottomSeekMoved && index >= 0) {
             seekToPageIndex(index, finished = true, allowMenuHidden = true)
         } else {
             sliderPageSeek.cancel()
         }
     }
 
+    private fun cancelBottomSeekCandidate() {
+        bottomSeekLongPressHandler.removeCallbacks(bottomSeekLongPressRunnable)
+        bottomSeekCandidate = false
+    }
+
     private fun resetBottomSeekGesture() {
+        bottomSeekLongPressHandler.removeCallbacks(bottomSeekLongPressRunnable)
         bottomSeekCandidate = false
         bottomSeekDragging = false
+        bottomSeekMoved = false
+        bottomSeekAnchorIndex = -1
         bottomSeekTargetIndex = -1
         bottomSeekVisible = false
     }
@@ -1446,6 +1518,14 @@ class ReaderActivity : BaseActivity() {
 
         startPostponedEnterTransition()
     }
+
+    internal fun openLatestPushedBookFromBoundary() {
+        if (viewModel.getSource() is KomgaSource) {
+            openLatestPushedBook()
+        }
+    }
+
+    internal fun supportsLatestPushedBookFromBoundary(): Boolean = viewModel.getSource() is KomgaSource
 
     private fun openLatestPushedBook() {
         if (openingLatestPushedBook) return
