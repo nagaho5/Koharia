@@ -19,8 +19,8 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.View.LAYER_TYPE_HARDWARE
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -563,9 +563,9 @@ class ReaderActivity : BaseActivity() {
                     showBattery = showReaderBattery,
                     showPages = showReaderPages,
                     backgroundOpacityPercent =
-                        KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(
-                            overlayBackgroundOpacity,
-                        ),
+                    KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(
+                        overlayBackgroundOpacity,
+                    ),
                     contentPaddingDp = KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(
                         overlayContentPadding,
                     ),
