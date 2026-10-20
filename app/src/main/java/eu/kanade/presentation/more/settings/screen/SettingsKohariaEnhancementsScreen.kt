@@ -2,6 +2,7 @@ package eu.kanade.presentation.more.settings.screen
 
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -17,7 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
@@ -278,6 +278,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
         )
     }
 }
+
 @Composable
 private fun IntegerInputPreference(
     preference: PreferenceData<Int>,
