@@ -2214,6 +2214,15 @@
     <string name="pref_enhancement_controls">操作与翻页</string>
     <string name="pref_enhancement_rapid_tap">快速连续点击翻页</string>
     <string name="pref_enhancement_rapid_tap_summary">分页漫画阅读器中，每次短按都立即计为一次翻页；启用时双击放大自动停用，双指缩放和拖动不变。</string>
+    <string name="pref_enhancement_reader_overlay">阅读页常驻信息</string>
+    <string name="pref_enhancement_reader_overlay_opacity">信息黑底透明度</string>
+    <string name="pref_enhancement_reader_overlay_opacity_summary">标题、时间/电量和页码共用的黑色背景透明度。范围 0–100%。</string>
+    <string name="pref_enhancement_reader_overlay_padding">信息内边距</string>
+    <string name="pref_enhancement_reader_overlay_padding_summary">常驻信息文字与黑色方框边缘的距离。范围 0–10 dp。</string>
+    <string name="pref_enhancement_bottom_seek">底边隐藏进度条</string>
+    <string name="pref_enhancement_bottom_seek_summary">阅读菜单隐藏时，从屏幕底部触发区横向拖动即可直接跳页；轻点仍执行原来的点击区域动作。</string>
+    <string name="pref_enhancement_bottom_seek_height">底部拖动触发高度</string>
+    <string name="pref_enhancement_bottom_seek_height_summary">屏幕底边向上延伸的不可见触摸区域高度。范围 10–100 dp；蓝色进度线本身仍贴住最底边。</string>
     <string name="pref_enhancement_about">关于此定制版</string>
     <string name="pref_enhancement_build_identity">构建标识</string>
 </resources>
