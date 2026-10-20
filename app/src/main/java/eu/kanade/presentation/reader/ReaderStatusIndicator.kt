@@ -12,12 +12,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
@@ -38,6 +45,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -47,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.tachiyomi.ui.reader.loader.ReaderBufferingState
+import eu.kanade.tachiyomi.ui.reader.setting.ReaderStatusPosition
 import kotlinx.coroutines.delay
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -75,7 +84,12 @@ fun ReaderStatusIndicator(
     showClock: Boolean = true,
     showBattery: Boolean = true,
     showPages: Boolean = true,
+    position: ReaderStatusPosition = ReaderStatusPosition.BOTTOM,
     modifier: Modifier = Modifier,
+    contentColor: Color = Color.White,
+    edgeBandHeight: androidx.compose.ui.unit.Dp? = null,
+    edgeInsets: WindowInsets? = null,
+    fixedCornerLayout: Boolean = false,
     backgroundOpacityPercent: Int = 50,
     contentPaddingDp: Int = 1,
 ) {
@@ -108,71 +122,164 @@ fun ReaderStatusIndicator(
     } else {
         null
     }
-    val labelColor = Color.White
-    val labelBackground = Color.Black.copy(
-        alpha = backgroundOpacityPercent.coerceIn(0, 100) / 100f,
-    )
-    val labelPadding = contentPaddingDp.coerceIn(0, 10).dp
+
+    if (fixedCornerLayout) {
+        val labelColor = Color.White
+        val labelBackground = Color.Black.copy(
+            alpha = backgroundOpacityPercent.coerceIn(0, 100) / 100f,
+        )
+        val labelPadding = contentPaddingDp.coerceIn(0, 10).dp
+        val textStyle = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Normal,
+            letterSpacing = 0.sp,
+            fontFeatureSettings = "tnum",
+        )
+
+        ReaderStatusLayer(modifier = modifier) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                if (showChapterTitle && !chapterTitle.isNullOrBlank()) {
+                    Text(
+                        text = chapterTitle,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .widthIn(max = maxWidth * 0.68f)
+                            .background(labelBackground)
+                            .padding(labelPadding),
+                        style = textStyle,
+                        color = labelColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (showClock || showBattery) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .background(labelBackground)
+                            .padding(labelPadding),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (showClock) {
+                            Text(
+                                DateFormat.getTimeFormat(context).format(now),
+                                style = textStyle,
+                                color = labelColor,
+                                maxLines = 1,
+                            )
+                        }
+                        if (showBattery) {
+                            battery?.let { value ->
+                                ReaderBatteryIcon(value, labelColor)
+                            }
+                        }
+                    }
+                }
+
+                if (pageText != null) {
+                    Text(
+                        text = pageText,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .background(labelBackground)
+                            .padding(labelPadding),
+                        style = textStyle,
+                        color = labelColor,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    val statusColor = contentColor.copy(alpha = 0.62f)
     val textStyle = MaterialTheme.typography.labelSmall.copy(
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
         letterSpacing = 0.sp,
         fontFeatureSettings = "tnum",
+        shadow = Shadow(
+            color = if (contentColor == Color.White) Color.Black.copy(alpha = 0.5f) else Color.Transparent,
+            blurRadius = 3f,
+        ),
     )
 
+    val statusInsets = edgeInsets ?: if (position == ReaderStatusPosition.TOP) {
+        WindowInsets.statusBars
+    } else {
+        WindowInsets.navigationBars
+    }
     ReaderStatusLayer(modifier = modifier) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            if (showChapterTitle && !chapterTitle.isNullOrBlank()) {
-                Text(
-                    text = chapterTitle,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .widthIn(max = maxWidth * 0.68f)
-                        .background(labelBackground)
-                        .padding(labelPadding),
-                    style = textStyle,
-                    color = labelColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            if (showClock || showBattery) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .align(if (position == ReaderStatusPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        statusInsets.only(
+                            if (position == ReaderStatusPosition.TOP) {
+                                WindowInsetsSides.Top
+                            } else {
+                                WindowInsetsSides.Bottom
+                            },
+                        ),
+                    )
+                    .then(
+                        if (edgeBandHeight != null) Modifier.height(edgeBandHeight) else Modifier,
+                    )
+                    .padding(horizontal = 18.dp, vertical = if (edgeBandHeight == null) 10.dp else 0.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Row(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .background(labelBackground)
-                        .padding(labelPadding),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (showClock) {
+                    if (showChapterTitle && !chapterTitle.isNullOrBlank()) {
                         Text(
-                            DateFormat.getTimeFormat(context).format(now),
+                            text = chapterTitle,
+                            modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
                             style = textStyle,
-                            color = labelColor,
+                            color = statusColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (pageText != null) {
+                        Text(
+                            text = pageText,
+                            modifier = Modifier.alignByBaseline(),
+                            style = textStyle,
+                            color = statusColor,
                             maxLines = 1,
                         )
                     }
-                    if (showBattery) {
-                        battery?.let { value ->
-                            ReaderBatteryIcon(value, labelColor)
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (showClock || showBattery) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (showClock) {
+                            Text(
+                                DateFormat.getTimeFormat(context).format(now),
+                                style = textStyle,
+                                color = statusColor,
+                                maxLines = 1,
+                            )
+                        }
+                        if (showBattery) {
+                            battery?.let { value ->
+                                ReaderBatteryIcon(value, statusColor)
+                            }
                         }
                     }
                 }
-            }
-
-            if (pageText != null) {
-                Text(
-                    text = pageText,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .background(labelBackground)
-                        .padding(labelPadding),
-                    style = textStyle,
-                    color = labelColor,
-                    maxLines = 1,
-                )
             }
         }
     }
