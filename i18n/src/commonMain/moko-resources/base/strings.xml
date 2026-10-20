@@ -2353,6 +2353,15 @@
     <string name="pref_enhancement_controls">Controls and page turns</string>
     <string name="pref_enhancement_rapid_tap">Rapid consecutive tap paging</string>
     <string name="pref_enhancement_rapid_tap_summary">In the paged comic reader, each short tap immediately counts as one page turn. Double-tap zoom is disabled while enabled; pinch zoom and dragging remain available.</string>
+    <string name="pref_enhancement_reader_overlay">Reader overlay</string>
+    <string name="pref_enhancement_reader_overlay_opacity">Overlay black background opacity</string>
+    <string name="pref_enhancement_reader_overlay_opacity_summary">Shared black background opacity for the title, clock/battery, and page indicator. Range: 0–100%.</string>
+    <string name="pref_enhancement_reader_overlay_padding">Overlay content padding</string>
+    <string name="pref_enhancement_reader_overlay_padding_summary">Space between overlay text and the square black background edge. Range: 0–10 dp.</string>
+    <string name="pref_enhancement_bottom_seek">Hidden bottom-edge seek bar</string>
+    <string name="pref_enhancement_bottom_seek_summary">While the reader menu is hidden, drag horizontally from the bottom trigger area to seek pages. A tap still performs the reader's normal tap-zone action.</string>
+    <string name="pref_enhancement_bottom_seek_height">Bottom seek trigger height</string>
+    <string name="pref_enhancement_bottom_seek_height_summary">Invisible touch area measured upward from the bottom edge. Range: 10–100 dp; the blue progress line itself remains flush with the bottom edge.</string>
     <string name="pref_enhancement_about">About this custom build</string>
     <string name="pref_enhancement_build_identity">Build identity</string>
 </resources>
