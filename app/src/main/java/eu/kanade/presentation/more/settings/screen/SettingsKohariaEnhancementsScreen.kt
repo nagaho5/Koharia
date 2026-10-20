@@ -1,13 +1,26 @@
 package eu.kanade.presentation.more.settings.screen
 
 import android.text.format.Formatter
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import eu.kanade.presentation.more.settings.Preference
+import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.BuildConfig
 import eu.kanade.tachiyomi.data.cache.LocalCacheCleaner
 import eu.kanade.tachiyomi.util.system.toast
@@ -16,6 +29,7 @@ import koharia.enhancement.KohariaEnhancementPreferences
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
+import tachiyomi.core.common.preference.Preference as PreferenceData
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import uy.kohesive.injekt.Injekt
@@ -179,6 +193,35 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                 ),
             ),
             Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_reader_overlay),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_reader_overlay_opacity),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.readerOverlayBackgroundOpacityPercent,
+                                title = stringResource(MR.strings.pref_enhancement_reader_overlay_opacity),
+                                summary = stringResource(MR.strings.pref_enhancement_reader_overlay_opacity_summary),
+                                range = 0..100,
+                                suffix = "%",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_reader_overlay_padding),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.readerOverlayContentPaddingDp,
+                                title = stringResource(MR.strings.pref_enhancement_reader_overlay_padding),
+                                summary = stringResource(MR.strings.pref_enhancement_reader_overlay_padding_summary),
+                                range = 0..10,
+                                suffix = " dp",
+                            )
+                        },
+                    ),
+                ),
+            ),
+            Preference.PreferenceGroup(
                 title = stringResource(MR.strings.pref_enhancement_display),
                 preferenceItems = persistentListOf(
                     Preference.PreferenceItem.SwitchPreference(
@@ -191,6 +234,23 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.pref_enhancement_controls),
                 preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.SwitchPreference(
+                        preference = preferences.bottomSeekEnabled,
+                        title = stringResource(MR.strings.pref_enhancement_bottom_seek),
+                        subtitle = stringResource(MR.strings.pref_enhancement_bottom_seek_summary),
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_bottom_seek_height),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.bottomSeekTriggerHeightDp,
+                                title = stringResource(MR.strings.pref_enhancement_bottom_seek_height),
+                                summary = stringResource(MR.strings.pref_enhancement_bottom_seek_height_summary),
+                                range = 10..100,
+                                suffix = " dp",
+                            )
+                        },
+                    ),
                     Preference.PreferenceItem.SwitchPreference(
                         preference = preferences.rapidTapPaging,
                         title = stringResource(MR.strings.pref_enhancement_rapid_tap),
@@ -217,4 +277,60 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
             ),
         )
     }
+}
+@Composable
+private fun IntegerInputPreference(
+    preference: PreferenceData<Int>,
+    title: String,
+    summary: String,
+    range: IntRange,
+    suffix: String,
+) {
+    val storedValue by preference.changes().collectAsState(initial = preference.get())
+    val value = storedValue.coerceIn(range.first, range.last)
+    var dialogVisible by remember { mutableStateOf(false) }
+
+    TextPreferenceWidget(
+        title = title,
+        subtitle = "$value$suffix\n$summary",
+        onPreferenceClick = { dialogVisible = true },
+    )
+
+    if (!dialogVisible) return
+
+    var input by remember(dialogVisible, value) { mutableStateOf(value.toString()) }
+    val parsed = input.toIntOrNull()
+    val valid = parsed != null && parsed in range
+
+    AlertDialog(
+        onDismissRequest = { dialogVisible = false },
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it.filter(Char::isDigit) },
+                singleLine = true,
+                isError = input.isNotEmpty() && !valid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = { Text("${range.first}–${range.last}$suffix") },
+            )
+        },
+        confirmButton = {
+            TextButton(
+                enabled = valid,
+                onClick = {
+                    preference.set(checkNotNull(parsed))
+                    dialogVisible = false
+                },
+            ) {
+                Text(stringResource(MR.strings.action_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { dialogVisible = false }) {
+                Text(stringResource(MR.strings.action_cancel))
+            }
+        },
+    )
 }
