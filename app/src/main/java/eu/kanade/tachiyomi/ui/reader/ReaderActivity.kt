@@ -1020,7 +1020,9 @@ class ReaderActivity : BaseActivity() {
         bottomSeekMoved = bottomSeekMoved || index != bottomSeekAnchorIndex
         bottomSeekTargetIndex = index
         bottomSeekProgress = index.toFloat() / (totalPages - 1).toFloat()
-        seekToPageIndex(index, finished = finished, allowMenuHidden = true)
+        if (bottomSeekMoved) {
+            seekToPageIndex(index, finished = finished, allowMenuHidden = true)
+        }
     }
 
     private fun finishBottomSeek() {

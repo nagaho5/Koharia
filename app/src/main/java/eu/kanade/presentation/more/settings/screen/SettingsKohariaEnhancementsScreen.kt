@@ -259,7 +259,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 title = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity),
                                 summary = stringResource(MR.strings.pref_enhancement_bottom_seek_sensitivity_summary),
                                 range = 1..1000,
-                                suffix = "% / screen",
+                                suffix = stringResource(MR.strings.pref_enhancement_bottom_seek_percent_per_screen_unit),
                             )
                         },
                     ),
@@ -271,7 +271,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 title = stringResource(MR.strings.pref_enhancement_bottom_seek_minimum_span),
                                 summary = stringResource(MR.strings.pref_enhancement_bottom_seek_minimum_span_summary),
                                 range = 1..10_000,
-                                suffix = " pages / screen",
+                                suffix = stringResource(MR.strings.pref_enhancement_bottom_seek_pages_per_screen_unit),
                             )
                         },
                     ),

@@ -2364,8 +2364,10 @@
     <string name="pref_enhancement_bottom_seek_height_summary">Invisible touch area measured upward from the bottom edge. Range: 10–200 dp; the blue progress line itself remains flush with the bottom edge.</string>
     <string name="pref_enhancement_bottom_seek_sensitivity">Relative seek sensitivity</string>
     <string name="pref_enhancement_bottom_seek_sensitivity_summary">Percentage of the book covered by dragging one full screen width. Range: 1–1000%; larger values require less finger movement.</string>
+    <string name="pref_enhancement_bottom_seek_percent_per_screen_unit">% / screen</string>
     <string name="pref_enhancement_bottom_seek_minimum_span">Minimum seek span</string>
     <string name="pref_enhancement_bottom_seek_minimum_span_summary">Minimum pages covered by one full screen drag for short books. Range: 1–10000 pages per screen.</string>
+    <string name="pref_enhancement_bottom_seek_pages_per_screen_unit"> pages / screen</string>
     <string name="pref_enhancement_about">About this custom build</string>
     <string name="pref_enhancement_build_identity">Build identity</string>
 </resources>

@@ -1,6 +1,5 @@
 package koharia.enhancement
 
-import io.kotest.matchers.floats.shouldBeExactly
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
@@ -12,13 +11,13 @@ class BottomSeekPolicyTest {
             totalPages = 25,
             sensitivityPercent = 300,
             minimumPagesPerScreen = 50,
-        ).shouldBeExactly(75f)
+        ) shouldBe 75f
 
         BottomSeekPolicy.pagesPerScreen(
             totalPages = 2_000,
             sensitivityPercent = 300,
             minimumPagesPerScreen = 50,
-        ).shouldBeExactly(6_000f)
+        ) shouldBe 6_000f
     }
 
     @Test
@@ -27,7 +26,7 @@ class BottomSeekPolicyTest {
             totalPages = 4,
             sensitivityPercent = 300,
             minimumPagesPerScreen = 50,
-        ).shouldBeExactly(50f)
+        ) shouldBe 50f
     }
 
     @Test

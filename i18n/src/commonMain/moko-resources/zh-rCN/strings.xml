@@ -2224,9 +2224,11 @@
     <string name="pref_enhancement_bottom_seek_height">底部拖动触发高度</string>
     <string name="pref_enhancement_bottom_seek_height_summary">屏幕底边向上延伸的不可见触摸区域高度。范围 10–200 dp；蓝色进度线本身仍贴住最底边。</string>
     <string name="pref_enhancement_bottom_seek_sensitivity">相对拖动灵敏度</string>
-    <string name="pref_enhancement_bottom_seek_sensitivity_summary">拖满一屏对应总页数的百分比。范围 1–1000%%；数值越大，移动同样距离跳过的页面越多。</string>
+    <string name="pref_enhancement_bottom_seek_sensitivity_summary">拖满一屏对应总页数的百分比。范围 1–1000%；数值越大，移动同样距离跳过的页面越多。</string>
+    <string name="pref_enhancement_bottom_seek_percent_per_screen_unit">% / 屏</string>
     <string name="pref_enhancement_bottom_seek_minimum_span">最低拖动跨度</string>
     <string name="pref_enhancement_bottom_seek_minimum_span_summary">总页数较少时，每拖满一屏至少对应的页数。范围 1–10000 页/屏。</string>
+    <string name="pref_enhancement_bottom_seek_pages_per_screen_unit"> 页 / 屏</string>
     <string name="pref_enhancement_about">关于此定制版</string>
     <string name="pref_enhancement_build_identity">构建标识</string>
 </resources>
