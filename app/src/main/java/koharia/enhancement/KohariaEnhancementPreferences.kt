@@ -21,11 +21,35 @@ class KohariaEnhancementPreferences(
     val rapidTapPaging: Preference<Boolean> =
         preferenceStore.getBoolean("custom_reader_rapid_tap", false)
 
+    val readerOverlayBackgroundOpacityPercent: Preference<Int> =
+        preferenceStore.getInt(
+            "custom_reader_overlay_background_opacity_percent",
+            DEFAULT_READER_OVERLAY_BACKGROUND_OPACITY_PERCENT,
+        )
+
+    val readerOverlayContentPaddingDp: Preference<Int> =
+        preferenceStore.getInt(
+            "custom_reader_overlay_content_padding_dp",
+            DEFAULT_READER_OVERLAY_CONTENT_PADDING_DP,
+        )
+
+    val bottomSeekEnabled: Preference<Boolean> =
+        preferenceStore.getBoolean("custom_reader_bottom_seek_enabled", true)
+
+    val bottomSeekTriggerHeightDp: Preference<Int> =
+        preferenceStore.getInt(
+            "custom_reader_bottom_seek_trigger_height_dp",
+            DEFAULT_BOTTOM_SEEK_TRIGGER_HEIGHT_DP,
+        )
+
     companion object {
         const val AUTO_PAGE_CACHE_SIZE_MB = 0
         const val DEFAULT_PAGE_CACHE_SIZE_MB = 500
         const val DEFAULT_PREFETCH_NEXT = 5
         const val DEFAULT_PREFETCH_PREVIOUS = 3
+        const val DEFAULT_READER_OVERLAY_BACKGROUND_OPACITY_PERCENT = 50
+        const val DEFAULT_READER_OVERLAY_CONTENT_PADDING_DP = 1
+        const val DEFAULT_BOTTOM_SEEK_TRIGGER_HEIGHT_DP = 40
 
         val PAGE_CACHE_SIZE_OPTIONS_MB = setOf(0, 100, 300, 500, 1024, 2048)
         val PREFETCH_NEXT_OPTIONS = setOf(1, 3, 5, 10, 15, 20)
@@ -39,5 +63,11 @@ class KohariaEnhancementPreferences(
 
         fun normalizedPrefetchPrevious(value: Int): Int =
             value.takeIf(PREFETCH_PREVIOUS_OPTIONS::contains) ?: DEFAULT_PREFETCH_PREVIOUS
+
+        fun normalizedReaderOverlayBackgroundOpacityPercent(value: Int): Int = value.coerceIn(0, 100)
+
+        fun normalizedReaderOverlayContentPaddingDp(value: Int): Int = value.coerceIn(0, 10)
+
+        fun normalizedBottomSeekTriggerHeightDp(value: Int): Int = value.coerceIn(10, 100)
     }
 }
