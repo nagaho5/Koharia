@@ -410,7 +410,7 @@ class PagerPageHolder(
                                 markSpreadDisplayed()
                             }
                         }
-                        onImageLoadError = { error -> setError(error, physicalPage) }
+                        onImageLoadError = { error -> handleImageLoadError(error, physicalPage) }
                         onScaleChanged = { viewer.activity.hideMenu() }
                         pageBackground = background
                         displayContent(
@@ -582,12 +582,16 @@ class PagerPageHolder(
 
     override fun onImageLoadError(error: Throwable?) {
         super.onImageLoadError(error)
+        handleImageLoadError(error, failedPage ?: page)
+    }
+
+    private fun handleImageLoadError(error: Throwable?, physicalPage: ReaderPage) {
         if (warmupOnly) {
             notifyWarmupFinished()
         } else {
             viewer.onTransitionTargetFailed(slot)
         }
-        setError(error, failedPage ?: page)
+        setError(error, physicalPage)
     }
 
     private fun markSpreadDisplayed() {

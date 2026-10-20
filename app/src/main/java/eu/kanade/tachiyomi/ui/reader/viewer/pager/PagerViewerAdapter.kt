@@ -222,7 +222,7 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
         activeRenderWarmups.remove(slot)
         viewer.detachRenderWarmupHolderForPromotion(holder)
         holder.promoteFromWarmup()
-        pumpRenderWarmups()
+        viewer.pager.post(::pumpRenderWarmups)
         return holder
     }
 
