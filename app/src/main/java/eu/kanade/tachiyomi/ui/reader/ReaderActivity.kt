@@ -19,6 +19,7 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.View.LAYER_TYPE_HARDWARE
 import android.view.WindowManager
 import android.widget.Toast
@@ -62,6 +63,7 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.EInkPreferences
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
+import eu.kanade.presentation.reader.ReaderBottomSeekIndicator
 import eu.kanade.presentation.reader.ReaderBufferingIndicator
 import eu.kanade.presentation.reader.ReaderContentOverlay
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
@@ -107,6 +109,7 @@ import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import koharia.connection.SharedAppPreferences
 import koharia.document.toDocumentRenderSettings
+import koharia.enhancement.KohariaEnhancementPreferences
 import koharia.epub.DocumentBookInfoDialog
 import koharia.epub.EpubBottomPanel
 import koharia.epub.EpubDocumentMorePanel
@@ -156,6 +159,7 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.ByteArrayOutputStream
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class ReaderActivity : BaseActivity() {
@@ -273,6 +277,7 @@ class ReaderActivity : BaseActivity() {
     }
 
     private val sharedAppPreferences = Injekt.get<SharedAppPreferences>()
+    private val enhancementPreferences by lazy { sharedAppPreferences.enhancementPreferences() }
     private val eInkPreferences = Injekt.get<EInkPreferences>()
     val readerPreferences: ReaderPreferences by lazy { viewModel.readerPreferences }
     private val useEpubSettings: Boolean by lazy {
@@ -317,6 +322,14 @@ class ReaderActivity : BaseActivity() {
         private set
 
     private val sliderPageSeek by lazy { ReaderPageSeek(lifecycleScope) }
+    private val bottomSeekTouchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
+    private var bottomSeekCandidate = false
+    private var bottomSeekDragging = false
+    private var bottomSeekDownX = 0f
+    private var bottomSeekDownY = 0f
+    private var bottomSeekTargetIndex = -1
+    private var bottomSeekVisible by mutableStateOf(false)
+    private var bottomSeekProgress by mutableStateOf(0f)
 
     /**
      * Called when the activity is created. Initializes the presenter and configuration.
@@ -497,13 +510,13 @@ class ReaderActivity : BaseActivity() {
         val state by viewModel.state.collectAsState()
         val showPageNumber by readerPreferences.showPageNumber.collectAsState()
         val showBufferingSpeed by readerPreferences.showBufferingSpeed.collectAsState()
-        val readerStatusPosition by readerPreferences.readerStatusPosition.collectAsState()
         val showReaderChapterTitle by readerPreferences.showReaderChapterTitle.collectAsState()
         val showReaderClock by readerPreferences.showReaderClock.collectAsState()
         val showReaderBattery by readerPreferences.showReaderBattery.collectAsState()
         val showReaderPages by readerPreferences.showReaderPages.collectAsState()
-        val statusReaderTheme by readerPreferences.readerTheme.collectAsState()
-        val statusCustomBackground by readerPreferences.readerCustomBackgroundColor.collectAsState()
+        val overlayBackgroundOpacity by enhancementPreferences.readerOverlayBackgroundOpacityPercent.collectAsState()
+        val overlayContentPadding by enhancementPreferences.readerOverlayContentPaddingDp.collectAsState()
+        val bottomSeekEnabled by enhancementPreferences.bottomSeekEnabled.collectAsState()
         val bufferingFlow = state.currentChapter?.pageLoader?.bufferingState ?: EmptyReaderBufferingState
         val buffering by bufferingFlow.collectAsState()
         val activeComicPanel = remember { mutableStateOf(ComicBottomPanel.NONE) }
@@ -549,21 +562,21 @@ class ReaderActivity : BaseActivity() {
                     showClock = showReaderClock,
                     showBattery = showReaderBattery,
                     showPages = showReaderPages,
-                    position = readerStatusPosition,
-                    contentColor = when (statusReaderTheme) {
-                        0 -> androidx.compose.ui.graphics.Color.Black
-                        ReaderPreferences.AUTOMATIC_BACKGROUND_THEME ->
-                            androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-                        ReaderPreferences.CUSTOM_BACKGROUND_THEME ->
-                            if (androidx.core.graphics.ColorUtils.calculateLuminance(statusCustomBackground) > 0.5) {
-                                androidx.compose.ui.graphics.Color.Black
-                            } else {
-                                androidx.compose.ui.graphics.Color.White
-                            }
-                        else -> androidx.compose.ui.graphics.Color.White
-                    },
+                    backgroundOpacityPercent =
+                        KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(
+                            overlayBackgroundOpacity,
+                        ),
+                    contentPaddingDp = KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(
+                        overlayContentPadding,
+                    ),
                 )
             }
+
+            ReaderBottomSeekIndicator(
+                visible = !state.menuVisible && bottomSeekEnabled && bottomSeekVisible,
+                progress = bottomSeekProgress,
+                rightToLeft = state.viewer is R2LPagerViewer,
+            )
 
             ReaderBufferingIndicator(buffering = buffering, enabled = showBufferingSpeed)
 
@@ -856,6 +869,109 @@ class ReaderActivity : BaseActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val handled = viewModel.state.value.viewer?.handleKeyEvent(event) ?: false
         return handled || super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (bottomSeekDragging) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    updateBottomSeek(event.x, finished = false)
+                    return true
+                }
+                MotionEvent.ACTION_UP -> {
+                    updateBottomSeek(event.x, finished = true)
+                    resetBottomSeekGesture()
+                    return true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    finishBottomSeek()
+                    resetBottomSeekGesture()
+                    return true
+                }
+            }
+        }
+
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            resetBottomSeekGesture()
+            if (canStartBottomSeek(event)) {
+                bottomSeekCandidate = true
+                bottomSeekDownX = event.x
+                bottomSeekDownY = event.y
+            }
+            return super.dispatchTouchEvent(event)
+        }
+
+        if (bottomSeekCandidate) {
+            if (event.pointerCount > 1) {
+                bottomSeekCandidate = false
+                return super.dispatchTouchEvent(event)
+            }
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.x - bottomSeekDownX
+                    val dy = event.y - bottomSeekDownY
+                    if (abs(dy) > bottomSeekTouchSlop && abs(dy) > abs(dx)) {
+                        bottomSeekCandidate = false
+                        return super.dispatchTouchEvent(event)
+                    }
+                    if (abs(dx) > bottomSeekTouchSlop && abs(dx) >= abs(dy)) {
+                        bottomSeekDragging = true
+                        bottomSeekVisible = true
+                        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+                        super.dispatchTouchEvent(cancel)
+                        cancel.recycle()
+                        updateBottomSeek(event.x, finished = false)
+                        return true
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    bottomSeekCandidate = false
+                }
+            }
+        }
+
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun canStartBottomSeek(event: MotionEvent): Boolean {
+        if (!::binding.isInitialized || useEpubSettings || viewModel.state.value.menuVisible) return false
+        if (!enhancementPreferences.bottomSeekEnabled.get()) return false
+        if (viewModel.state.value.totalPages <= 1 || event.pointerCount != 1) return false
+        val triggerHeightDp = KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(
+            enhancementPreferences.bottomSeekTriggerHeightDp.get(),
+        )
+        val triggerHeightPx = triggerHeightDp * resources.displayMetrics.density
+        return event.y >= binding.root.height - triggerHeightPx
+    }
+
+    private fun updateBottomSeek(x: Float, finished: Boolean) {
+        val state = viewModel.state.value
+        val totalPages = state.totalPages
+        val width = binding.root.width
+        if (totalPages <= 1 || width <= 0) return
+
+        val visualProgress = (x / width.toFloat()).coerceIn(0f, 1f)
+        val logicalProgress = if (state.viewer is R2LPagerViewer) 1f - visualProgress else visualProgress
+        val index = (logicalProgress * (totalPages - 1)).roundToInt().coerceIn(0, totalPages - 1)
+        bottomSeekTargetIndex = index
+        bottomSeekProgress = logicalProgress
+        seekToPageIndex(index, finished = finished, allowMenuHidden = true)
+    }
+
+    private fun finishBottomSeek() {
+        val index = bottomSeekTargetIndex
+        if (index >= 0) {
+            seekToPageIndex(index, finished = true, allowMenuHidden = true)
+        } else {
+            sliderPageSeek.cancel()
+        }
+    }
+
+    private fun resetBottomSeekGesture() {
+        bottomSeekCandidate = false
+        bottomSeekDragging = false
+        bottomSeekTargetIndex = -1
+        bottomSeekVisible = false
     }
 
     /**
@@ -1473,13 +1589,17 @@ class ReaderActivity : BaseActivity() {
         }
     }
 
-    private fun seekToPageIndex(index: Int, finished: Boolean) {
+    private fun seekToPageIndex(index: Int, finished: Boolean, allowMenuHidden: Boolean = false) {
         val chapter = viewModel.state.value.currentChapter ?: return
         val viewer = viewModel.state.value.viewer ?: return
         val loader = chapter.pageLoader
         val preview = {
             val state = viewModel.state.value
-            if (state.currentChapter === chapter && state.viewer === viewer && state.menuVisible) {
+            if (
+                state.currentChapter === chapter &&
+                state.viewer === viewer &&
+                (state.menuVisible || allowMenuHidden)
+            ) {
                 loader?.setNetworkRequestsDeferred(true)
                 isScrollingThroughPages = true
                 moveToPageIndex(index)
