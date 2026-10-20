@@ -562,6 +562,7 @@ class ReaderActivity : BaseActivity() {
                     showClock = showReaderClock,
                     showBattery = showReaderBattery,
                     showPages = showReaderPages,
+                    fixedCornerLayout = true,
                     backgroundOpacityPercent =
                     KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(
                         overlayBackgroundOpacity,
