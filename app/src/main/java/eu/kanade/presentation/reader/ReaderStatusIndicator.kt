@@ -10,8 +10,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.Icon
@@ -90,6 +93,8 @@ fun ReaderStatusIndicator(
     contentColor: Color = Color.White,
     edgeBandHeight: androidx.compose.ui.unit.Dp? = null,
     edgeInsets: WindowInsets? = null,
+    backgroundOpacityPercent: Int = 50,
+    contentPaddingDp: Int = 1,
 ) {
     if (!showStatus) return
     val context = LocalContext.current
@@ -120,97 +125,93 @@ fun ReaderStatusIndicator(
     } else {
         null
     }
-    val statusColor = contentColor.copy(alpha = 0.62f)
+    val labelColor = Color.White
+    val labelBackground = Color.Black.copy(
+        alpha = backgroundOpacityPercent.coerceIn(0, 100) / 100f,
+    )
+    val labelPadding = contentPaddingDp.coerceIn(0, 10).dp
     val textStyle = MaterialTheme.typography.labelSmall.copy(
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
         letterSpacing = 0.sp,
         fontFeatureSettings = "tnum",
-        shadow = Shadow(
-            color = if (contentColor == Color.White) Color.Black.copy(alpha = 0.5f) else Color.Transparent,
-            blurRadius = 3f,
-        ),
     )
 
-    val statusInsets = edgeInsets ?: if (position ==
-        ReaderStatusPosition.TOP
-    ) {
-        WindowInsets.statusBars
-    } else {
-        WindowInsets.navigationBars
-    }
     ReaderStatusLayer(modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .align(if (position == ReaderStatusPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .windowInsetsPadding(
-                        statusInsets.only(
-                            if (position ==
-                                ReaderStatusPosition.TOP
-                            ) {
-                                WindowInsetsSides.Top
-                            } else {
-                                WindowInsetsSides.Bottom
-                            },
-                        ),
-                    )
-                    .then(
-                        if (edgeBandHeight != null) Modifier.height(edgeBandHeight) else Modifier,
-                    )
-                    .padding(horizontal = 18.dp, vertical = if (edgeBandHeight == null) 10.dp else 0.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            if (showChapterTitle && !chapterTitle.isNullOrBlank()) {
+                Text(
+                    text = chapterTitle,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .widthIn(max = maxWidth * 0.68f)
+                        .background(labelBackground)
+                        .padding(labelPadding),
+                    style = textStyle,
+                    color = labelColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            if (showClock || showBattery) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(0.5f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(labelBackground)
+                        .padding(labelPadding),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (showChapterTitle && !chapterTitle.isNullOrBlank()) {
+                    if (showClock) {
                         Text(
-                            text = chapterTitle,
-                            modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
+                            DateFormat.getTimeFormat(context).format(now),
                             style = textStyle,
-                            color = statusColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    if (pageText != null) {
-                        Text(
-                            text = pageText,
-                            modifier = Modifier.alignByBaseline(),
-                            style = textStyle,
-                            color = statusColor,
+                            color = labelColor,
                             maxLines = 1,
                         )
                     }
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                if (showClock || showBattery) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (showClock) {
-                            Text(
-                                DateFormat.getTimeFormat(context).format(now),
-                                style = textStyle,
-                                color = statusColor,
-                                maxLines = 1,
-                            )
-                        }
-                        if (showBattery) {
-                            battery?.let { value ->
-                                ReaderBatteryIcon(value, statusColor)
-                            }
+                    if (showBattery) {
+                        battery?.let { value ->
+                            ReaderBatteryIcon(value, labelColor)
                         }
                     }
                 }
             }
+
+            if (pageText != null) {
+                Text(
+                    text = pageText,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .background(labelBackground)
+                        .padding(labelPadding),
+                    style = textStyle,
+                    color = labelColor,
+                    maxLines = 1,
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun ReaderBottomSeekIndicator(
+    visible: Boolean,
+    progress: Float,
+    rightToLeft: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (!visible) return
+    val fraction = progress.coerceIn(0f, 1f)
+    Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .align(if (rightToLeft) Alignment.BottomEnd else Alignment.BottomStart)
+                .fillMaxWidth(fraction)
+                .height(2.dp)
+                .background(Color(0xFF0A84FF)),
+        )
     }
 }
 
