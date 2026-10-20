@@ -14,6 +14,10 @@ class KohariaEnhancementPreferencesTest {
         preferences.komgaPrefetchNextPages.get() shouldBe 5
         preferences.komgaPrefetchPreviousPages.get() shouldBe 3
         preferences.rapidTapPaging.get() shouldBe false
+        preferences.readerOverlayBackgroundOpacityPercent.get() shouldBe 50
+        preferences.readerOverlayContentPaddingDp.get() shouldBe 1
+        preferences.bottomSeekEnabled.get() shouldBe true
+        preferences.bottomSeekTriggerHeightDp.get() shouldBe 40
     }
 
     @Test
@@ -21,6 +25,12 @@ class KohariaEnhancementPreferencesTest {
         KohariaEnhancementPreferences.normalizedPageCacheSizeMb(777) shouldBe 500
         KohariaEnhancementPreferences.normalizedPrefetchNext(9) shouldBe 5
         KohariaEnhancementPreferences.normalizedPrefetchPrevious(2) shouldBe 3
+        KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(-1) shouldBe 0
+        KohariaEnhancementPreferences.normalizedReaderOverlayBackgroundOpacityPercent(101) shouldBe 100
+        KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(-1) shouldBe 0
+        KohariaEnhancementPreferences.normalizedReaderOverlayContentPaddingDp(11) shouldBe 10
+        KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(9) shouldBe 10
+        KohariaEnhancementPreferences.normalizedBottomSeekTriggerHeightDp(101) shouldBe 100
     }
 
     @Test
