@@ -265,7 +265,9 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                             IntegerInputPreference(
                                 preference = preferences.adaptiveRenderBackwardStrengthPercent,
                                 title = stringResource(MR.strings.pref_enhancement_adaptive_backward_strength),
-                                summary = stringResource(MR.strings.pref_enhancement_adaptive_backward_strength_summary),
+                                summary = stringResource(
+                                    MR.strings.pref_enhancement_adaptive_backward_strength_summary,
+                                ),
                                 range = 10..200,
                                 suffix = "%",
                             )
@@ -277,7 +279,9 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                             IntegerInputPreference(
                                 preference = preferences.adaptiveRenderConcurrencyStrengthPercent,
                                 title = stringResource(MR.strings.pref_enhancement_adaptive_concurrency_strength),
-                                summary = stringResource(MR.strings.pref_enhancement_adaptive_concurrency_strength_summary),
+                                summary = stringResource(
+                                    MR.strings.pref_enhancement_adaptive_concurrency_strength_summary,
+                                ),
                                 range = 10..200,
                                 suffix = "%",
                             )
