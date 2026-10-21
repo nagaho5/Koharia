@@ -17,6 +17,8 @@ open class ReaderPage(
 
     var spreadInfo: SpreadInfo = SpreadInfo.UNKNOWN
 
+    var compressedSizeBytes: Long? = null
+
     val spreadKind: SpreadKind
         get() = spreadInfo.kind
 

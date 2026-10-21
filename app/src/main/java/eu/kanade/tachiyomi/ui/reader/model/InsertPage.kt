@@ -8,5 +8,7 @@ class InsertPage(val parent: ReaderPage) : ReaderPage(parent.index, parent.url, 
         status = State.Ready
         stream = parent.stream
         bitmap = parent.bitmap
+        compressedSizeBytes = parent.compressedSizeBytes
+        spreadInfo = parent.spreadInfo
     }
 }

@@ -230,7 +230,10 @@ internal class HttpPageLoader(
     private fun ConnectionPageList.toReaderPages(): List<ReaderPage> {
         return pages.mapIndexed { index, page ->
             ReaderPage(index, page.url, page.imageUrl).also { readerPage ->
-                metadata[page.index]?.toSpreadInfo()?.let { readerPage.spreadInfo = it }
+                metadata[page.index]?.let { pageMetadata ->
+                    pageMetadata.toSpreadInfo()?.let { readerPage.spreadInfo = it }
+                    readerPage.compressedSizeBytes = pageMetadata.sizeBytes?.takeIf { it > 0L }
+                }
             }
         }
     }

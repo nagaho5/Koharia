@@ -195,6 +195,17 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.pref_enhancement_render_warmup),
                 preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.ListPreference(
+                        preference = preferences.renderWarmupMode,
+                        entries = persistentMapOf(
+                            KohariaEnhancementPreferences.RENDER_WARMUP_MODE_FIXED to
+                                stringResource(MR.strings.pref_enhancement_render_mode_fixed),
+                            KohariaEnhancementPreferences.RENDER_WARMUP_MODE_ADAPTIVE to
+                                stringResource(MR.strings.pref_enhancement_render_mode_adaptive),
+                        ),
+                        title = stringResource(MR.strings.pref_enhancement_render_mode),
+                        subtitle = "%s\n" + stringResource(MR.strings.pref_enhancement_render_mode_summary),
+                    ),
                     Preference.PreferenceItem.CustomPreference(
                         title = stringResource(MR.strings.pref_enhancement_render_warmup_forward),
                         content = {
@@ -226,8 +237,61 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 preference = preferences.renderWarmupConcurrency,
                                 title = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency),
                                 summary = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency_summary),
-                                range = 1..5,
+                                range = 1..10,
                                 suffix = "",
+                            )
+                        },
+                    ),
+                ),
+            ),
+            Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_enhancement_adaptive_render),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_adaptive_forward_strength),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.adaptiveRenderForwardStrengthPercent,
+                                title = stringResource(MR.strings.pref_enhancement_adaptive_forward_strength),
+                                summary = stringResource(MR.strings.pref_enhancement_adaptive_forward_strength_summary),
+                                range = 10..200,
+                                suffix = "%",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_adaptive_backward_strength),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.adaptiveRenderBackwardStrengthPercent,
+                                title = stringResource(MR.strings.pref_enhancement_adaptive_backward_strength),
+                                summary = stringResource(MR.strings.pref_enhancement_adaptive_backward_strength_summary),
+                                range = 10..200,
+                                suffix = "%",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_adaptive_concurrency_strength),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.adaptiveRenderConcurrencyStrengthPercent,
+                                title = stringResource(MR.strings.pref_enhancement_adaptive_concurrency_strength),
+                                summary = stringResource(MR.strings.pref_enhancement_adaptive_concurrency_strength_summary),
+                                range = 10..200,
+                                suffix = "%",
+                            )
+                        },
+                    ),
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(MR.strings.pref_enhancement_adaptive_max_forward),
+                        content = {
+                            IntegerInputPreference(
+                                preference = preferences.adaptiveRenderMaxForwardPages,
+                                title = stringResource(MR.strings.pref_enhancement_adaptive_max_forward),
+                                summary = stringResource(MR.strings.pref_enhancement_adaptive_max_forward_summary),
+                                range = 5..30,
+                                suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
                             )
                         },
                     ),

@@ -400,6 +400,17 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
             .filterIsInstance(PagerPageHolder::class.java)
             .mapTo(linkedSetOf(), PagerPageHolder::slot)
 
+    internal fun attachedPreparingRenderCount(): Int =
+        pager.children
+            .filterIsInstance(PagerPageHolder::class.java)
+            .count { !it.isTransitionTargetReady() }
+
+    internal fun isAttachedSlotReady(slot: PagerSlot.Pages): Boolean =
+        pager.children
+            .filterIsInstance(PagerPageHolder::class.java)
+            .firstOrNull { it.slot == slot }
+            ?.isTransitionTargetReady() == true
+
     /**
      * Returns the PagerPageHolder for the provided page
      */
@@ -852,6 +863,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
     }
 
     internal fun onTransitionTargetReady(slot: PagerSlot.Pages) {
+        adapter.onAttachedRenderStateChanged()
         val pending = pendingPageTurn?.takeIf { it.slot == slot } ?: return
         if (adapter.slots.getOrNull(pending.target) != slot) {
             cancelPendingPageTurn(reactivateCurrent = true)
@@ -872,6 +884,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
     }
 
     internal fun onTransitionTargetFailed(slot: PagerSlot.Pages) {
+        adapter.onAttachedRenderStateChanged()
         val pending = pendingPageTurn?.takeIf { it.slot == slot } ?: return
         pendingPageTurn = null
         pendingPageTurnTimeout?.cancel()

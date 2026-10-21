@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.util.system.createReaderThemeContext
 import eu.kanade.tachiyomi.widget.ViewPagerAdapter
 import koharia.connection.SharedAppPreferences
 import koharia.enhancement.KohariaEnhancementPreferences
+import koharia.enhancement.RenderWarmupPolicy
 import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -35,6 +36,8 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     }
     private val renderWarmHolders = linkedMapOf<PagerSlot.Pages, PagerPageHolder>()
     private val activeRenderWarmups = linkedSetOf<PagerSlot.Pages>()
+    private var desiredForwardWarmSlots = emptyList<PagerSlot.Pages>()
+    private var desiredBackwardWarmSlots = emptyList<PagerSlot.Pages>()
     private var desiredRenderWarmSlots = emptyList<PagerSlot.Pages>()
     private var renderWarmupConcurrency = KohariaEnhancementPreferences.DEFAULT_RENDER_WARMUP_CONCURRENCY
 
@@ -162,17 +165,12 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
             clearRenderWarmups()
             return
         }
-        val forwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupForward(
-            enhancementPreferences.renderWarmupForwardPages.get(),
+        val mode = KohariaEnhancementPreferences.normalizedRenderWarmupMode(
+            enhancementPreferences.renderWarmupMode.get(),
         )
-        val backwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupBackward(
-            enhancementPreferences.renderWarmupBackwardPages.get(),
-        )
-        renderWarmupConcurrency = KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(
-            enhancementPreferences.renderWarmupConcurrency.get(),
-        )
-
         val chapter = current.first.chapter
+        val forwardStep = if (viewer is R2LPagerViewer) -1 else 1
+
         fun collect(step: Int, count: Int): List<PagerSlot.Pages> {
             if (count <= 0) return emptyList()
             val result = mutableListOf<PagerSlot.Pages>()
@@ -192,11 +190,63 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
             return result
         }
 
-        val forwardStep = if (viewer is R2LPagerViewer) -1 else 1
-        val forward = collect(forwardStep, forwardCount)
-        val backward = collect(-forwardStep, backwardCount)
-        desiredRenderWarmSlots = forward + backward
+        when (mode) {
+            KohariaEnhancementPreferences.RENDER_WARMUP_MODE_FIXED -> {
+                val forwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupForward(
+                    enhancementPreferences.renderWarmupForwardPages.get(),
+                )
+                val backwardCount = KohariaEnhancementPreferences.normalizedRenderWarmupBackward(
+                    enhancementPreferences.renderWarmupBackwardPages.get(),
+                )
+                desiredForwardWarmSlots = collect(forwardStep, forwardCount)
+                desiredBackwardWarmSlots = collect(-forwardStep, backwardCount)
+                renderWarmupConcurrency = KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(
+                    enhancementPreferences.renderWarmupConcurrency.get(),
+                )
+            }
+            else -> {
+                val forwardStrength = KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(
+                    enhancementPreferences.adaptiveRenderForwardStrengthPercent.get(),
+                )
+                val backwardStrength = KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(
+                    enhancementPreferences.adaptiveRenderBackwardStrengthPercent.get(),
+                )
+                val concurrencyStrength = KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(
+                    enhancementPreferences.adaptiveRenderConcurrencyStrengthPercent.get(),
+                )
+                val maxForward = KohariaEnhancementPreferences.normalizedAdaptiveRenderMaxForwardPages(
+                    enhancementPreferences.adaptiveRenderMaxForwardPages.get(),
+                )
 
+                val forwardCandidates = collect(forwardStep, maxForward)
+                val backwardCandidates = collect(
+                    -forwardStep,
+                    RenderWarmupPolicy.adaptiveBackwardPageCap(backwardStrength),
+                )
+                val forwardCount = RenderWarmupPolicy.forwardSlotCount(
+                    slotCosts = forwardCandidates.map(::renderWarmupCost),
+                    strengthPercent = forwardStrength,
+                    maxSlots = maxForward,
+                )
+                val backwardCount = RenderWarmupPolicy.backwardSlotCount(
+                    slotCosts = backwardCandidates.map(::renderWarmupCost),
+                    strengthPercent = backwardStrength,
+                )
+                desiredForwardWarmSlots = forwardCandidates.take(forwardCount)
+                desiredBackwardWarmSlots = backwardCandidates.take(backwardCount)
+                renderWarmupConcurrency = RenderWarmupPolicy.adaptiveConcurrency(
+                    metrics = forwardCandidates
+                        .asSequence()
+                        .flatMap { it.pages.asSequence() }
+                        .map(::renderWarmupMetrics)
+                        .take(RenderWarmupPolicy.CONCURRENCY_SAMPLE_PAGES)
+                        .toList(),
+                    strengthPercent = concurrencyStrength,
+                )
+            }
+        }
+
+        desiredRenderWarmSlots = desiredForwardWarmSlots + desiredBackwardWarmSlots
         val desired = desiredRenderWarmSlots.toSet()
         renderWarmHolders.keys
             .filterNot(desired::contains)
@@ -210,7 +260,13 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     fun isWarmSlotReady(slot: PagerSlot.Pages): Boolean =
         renderWarmHolders[slot]?.isTransitionTargetReady() == true
 
+    fun onAttachedRenderStateChanged() {
+        viewer.pager.post(::pumpRenderWarmups)
+    }
+
     fun clearRenderWarmups() {
+        desiredForwardWarmSlots = emptyList()
+        desiredBackwardWarmSlots = emptyList()
         desiredRenderWarmSlots = emptyList()
         activeRenderWarmups.clear()
         renderWarmHolders.values.toList().forEach(viewer::releaseRenderWarmupHolder)
@@ -233,13 +289,42 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
 
     private fun pumpRenderWarmups() {
         if (desiredRenderWarmSlots.isEmpty()) return
+
         val attached = viewer.attachedPageSlots()
-        val availableSlots = desiredRenderWarmSlots.asSequence()
+        val attachedPreparing = viewer.attachedPreparingRenderCount()
+        val hiddenCapacity = (renderWarmupConcurrency - attachedPreparing).coerceAtLeast(0)
+
+        val immediateForward = desiredForwardWarmSlots.firstOrNull()
+        val immediateForwardReady = immediateForward == null ||
+            viewer.isAttachedSlotReady(immediateForward) ||
+            isWarmSlotReady(immediateForward)
+        val eligible = if (immediateForwardReady) {
+            desiredRenderWarmSlots
+        } else {
+            desiredForwardWarmSlots.take(NEAR_PAGE_WINDOW_WHILE_NEXT_PENDING)
+        }
+        val eligibleSet = eligible.toSet()
+
+        activeRenderWarmups
+            .filterNot(eligibleSet::contains)
+            .toList()
+            .forEach(::releaseRenderWarmHolder)
+
+        while (activeRenderWarmups.size > hiddenCapacity) {
+            val farthest = activeRenderWarmups.maxByOrNull { slot ->
+                desiredRenderWarmSlots.indexOf(slot).takeIf { it >= 0 } ?: Int.MAX_VALUE
+            } ?: break
+            releaseRenderWarmHolder(farthest)
+        }
+
+        if (hiddenCapacity <= activeRenderWarmups.size) return
+
+        val availableSlots = eligible.asSequence()
             .filterNot(attached::contains)
             .filterNot(renderWarmHolders::containsKey)
             .iterator()
 
-        while (activeRenderWarmups.size < renderWarmupConcurrency && availableSlots.hasNext()) {
+        while (activeRenderWarmups.size < hiddenCapacity && availableSlots.hasNext()) {
             val slot = availableSlots.next()
             val holder = PagerPageHolder(
                 readerThemedContext = readerThemedContext,
@@ -259,6 +344,18 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
         if (renderWarmHolders[slot] !== holder) return
         activeRenderWarmups.remove(slot)
         pumpRenderWarmups()
+    }
+
+    private fun renderWarmupCost(slot: PagerSlot.Pages): Double =
+        slot.pages.sumOf { page -> RenderWarmupPolicy.pageCost(renderWarmupMetrics(page)) }
+
+    private fun renderWarmupMetrics(page: ReaderPage): RenderWarmupPolicy.ImageMetrics {
+        val sourcePage = (page as? InsertPage)?.parent ?: page
+        return RenderWarmupPolicy.ImageMetrics(
+            compressedSizeBytes = sourcePage.compressedSizeBytes,
+            width = sourcePage.spreadInfo.width,
+            height = sourcePage.spreadInfo.height,
+        )
     }
 
     private fun buildSinglePageSlots(): List<PagerSlot> = sourceItems.map { item ->
@@ -321,6 +418,10 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
     }
 
     private fun anchorPage(slot: PagerSlot): ReaderPage? = (slot as? PagerSlot.Pages)?.progressPage
+
+    private companion object {
+        const val NEAR_PAGE_WINDOW_WHILE_NEXT_PENDING = 3
+    }
 
     private sealed interface SourceItem {
         data class Page(val page: ReaderPage) : SourceItem
