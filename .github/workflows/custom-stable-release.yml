@@ -1,0 +1,155 @@
+name: Custom Stable Release
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+
+concurrency:
+  group: custom-stable-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'nagaho5/Koharia'
+    name: Build and publish parallel stable APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout release branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Validate release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_name="$(sed -nE 's/^[[:space:]]*versionName = "([^"]+)"/\1/p' app/build.gradle.kts | head -n 1)"
+          version_code="$(sed -nE 's/^[[:space:]]*versionCode = ([0-9]+)/\1/p' app/build.gradle.kts | head -n 1)"
+          tag="v${version_name}"
+          expected_branch="release/${tag}"
+          notes_path="docs/releases/${tag}.md"
+
+          if [[ -z "$version_name" || -z "$version_code" ]]; then
+            echo "::error::Unable to read versionName/versionCode from app/build.gradle.kts."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF_NAME" != "$expected_branch" ]]; then
+            echo "::error::Branch $GITHUB_REF_NAME must be named $expected_branch."
+            exit 1
+          fi
+          if [[ ! -f "$notes_path" ]]; then
+            echo "::error::Missing release notes: $notes_path"
+            exit 1
+          fi
+
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "notes_path=$notes_path" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+
+      - name: Prepare fixed signing key
+        env:
+          SIGNING_KEY: ${{ secrets.KOHARIA_CUSTOM_SIGNING_KEY }}
+          ALIAS: ${{ secrets.KOHARIA_CUSTOM_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KOHARIA_CUSTOM_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+          [[ -n "$SIGNING_KEY" ]] || missing+=("KOHARIA_CUSTOM_SIGNING_KEY")
+          [[ -n "$ALIAS" ]] || missing+=("KOHARIA_CUSTOM_ALIAS")
+          [[ -n "$KEY_STORE_PASSWORD" ]] || missing+=("KOHARIA_CUSTOM_KEY_STORE_PASSWORD")
+          [[ -n "$KEY_PASSWORD" ]] || missing+=("KOHARIA_CUSTOM_KEY_PASSWORD")
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing required Actions secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          printf '%s' "$SIGNING_KEY" | base64 --decode > custom-preview.jks
+          {
+            echo "storeFile=custom-preview.jks"
+            echo "storePassword=$KEY_STORE_PASSWORD"
+            echo "keyAlias=$ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Verify
+        run: |
+          ./gradlew spotlessCheck
+          ./gradlew testDebugUnitTest
+          ./gradlew :app:compilePreviewKotlin -PcustomPreviewSigning=true -PcustomStableVersion=true
+
+      - name: Build signed parallel stable APKs
+        run: ./gradlew assemblePreview -PcustomPreviewSigning=true -PcustomStableVersion=true
+
+      - name: Prepare release files
+        env:
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_dir="app/build/outputs/apk/preview"
+          universal="$release_dir/Koharia-v${VERSION_NAME}-preview.apk"
+          arm64="$release_dir/Koharia-v${VERSION_NAME}-preview-arm64-v8a.apk"
+
+          [[ -f "$universal" ]] || { echo "::error::Missing $universal"; exit 1; }
+          [[ -f "$arm64" ]] || { echo "::error::Missing $arm64"; exit 1; }
+
+          cp "$universal" "Koharia-${TAG}-parallel.apk"
+          cp "$arm64" "Koharia-${TAG}-parallel-arm64-v8a.apk"
+          sha256sum             "Koharia-${TAG}-parallel.apk"             "Koharia-${TAG}-parallel-arm64-v8a.apk"             > SHA256SUMS.txt
+
+      - name: Create release tag
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
+            tagged_commit="$(git rev-list -n 1 "$TAG")"
+            if [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
+              echo "::error::Existing tag $TAG points to $tagged_commit instead of $GITHUB_SHA."
+              exit 1
+            fi
+            echo "Tag $TAG already points to this release commit."
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Koharia ${{ steps.meta.outputs.tag }}
+          body_path: ${{ steps.meta.outputs.notes_path }}
+          draft: false
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: |
+            Koharia-${{ steps.meta.outputs.tag }}-parallel.apk
+            Koharia-${{ steps.meta.outputs.tag }}-parallel-arm64-v8a.apk
+            SHA256SUMS.txt

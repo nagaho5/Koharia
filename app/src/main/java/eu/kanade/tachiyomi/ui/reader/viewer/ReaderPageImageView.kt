@@ -448,6 +448,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
         data: Any,
         config: Config,
     ) = (pageView as? SubsamplingScaleImageView)?.apply {
+        setDoubleTapZoomEnabled(config.doubleTapZoomEnabled)
         setDoubleTapZoomDuration(config.zoomDuration.getSystemScaledDuration())
         setMinimumScaleType(config.minimumScaleType)
         setMinimumDpi(1) // Just so that very small image will be fit for initial load
@@ -538,7 +539,7 @@ open class ReaderPageImageView @JvmOverloads constructor(
                         override fun onDoubleTap(e: MotionEvent): Boolean {
                             // Replacing the listener removes the view's own double tap zoom, so
                             // reporting the gesture as unhandled leaves the scale untouched.
-                            if (config?.doubleTapZoomEnabled == false) return false
+                            if (config?.doubleTapZoomEnabled == false) return true
                             if (scale > 1F) {
                                 setScale(1F, e.x, e.y, true)
                             } else {

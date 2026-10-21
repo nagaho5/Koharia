@@ -39,6 +39,9 @@ val useDeviceTestFixture = providers.gradleProperty("deviceTestFixture")
 val useCustomPreviewSigning = providers.gradleProperty("customPreviewSigning")
     .map(String::toBoolean)
     .getOrElse(false)
+val useCustomStableVersion = providers.gradleProperty("customStableVersion")
+    .map(String::toBoolean)
+    .getOrElse(false)
 
 tasks.matching { it.name.startsWith("connected") && it.name.endsWith("AndroidTest") }.configureEach {
     doFirst {
@@ -77,8 +80,8 @@ android {
         applicationId = "app.koharia"
         manifestPlaceholders["kohariaAppLabel"] = "@string/app_name"
 
-        versionCode = 14
-        versionName = "0.7.0"
+        versionCode = 15
+        versionName = "1.0.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -152,7 +155,9 @@ android {
 
             applicationIdSuffix = ".debug"
 
-            versionNameSuffix = debug.versionNameSuffix
+            if (!useCustomStableVersion) {
+                versionNameSuffix = debug.versionNameSuffix
+            }
             if (useCustomPreviewSigning) {
                 check(hasReleaseKeystore) {
                     "Custom preview signing requires keystore.properties and its referenced keystore"

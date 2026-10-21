@@ -66,6 +66,11 @@ class DoubleTapZoomDeviceTest {
                 var scaleView: SubsamplingScaleImageView? = null
                 scenario.onActivity {
                     scaleView = reader.getChildAt(0) as SubsamplingScaleImageView
+                    assertEquals(
+                        "SSIV double-tap gate must match the reader setting",
+                        doubleTapZoomEnabled,
+                        checkNotNull(scaleView).isDoubleTapZoomEnabled,
+                    )
                     dispatchDoubleTap(reader)
                 }
                 val scale = awaitSettledScale(scenario) { checkNotNull(scaleView).scale }

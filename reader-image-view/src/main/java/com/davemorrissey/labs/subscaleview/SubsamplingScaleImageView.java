@@ -185,6 +185,7 @@ public class SubsamplingScaleImageView extends View {
     private boolean panEnabled = true;
     private boolean zoomEnabled = true;
     private boolean quickScaleEnabled = true;
+    private boolean doubleTapZoomEnabled = true;
     // Double tap zoom behaviour
     private float doubleTapZoomScale = 1F;
     private int doubleTapZoomStyle = ZOOM_FOCUS_FIXED;
@@ -500,10 +501,16 @@ public class SubsamplingScaleImageView extends View {
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
+                // After a double tap the GestureDetector can get into a state where the next fling
+                // is ignored, so always replace it before deciding whether the gesture may zoom.
+                setGestureDetector(context);
+                if (!doubleTapZoomEnabled) {
+                    // Consume the gesture at the image-view level. This keeps pinch zoom enabled,
+                    // but guarantees rapid consecutive page taps can never leak into SSIV's own
+                    // double-tap or quick-scale paths, even if the UI thread is briefly stalled.
+                    return true;
+                }
                 if (zoomEnabled && readySent && vTranslate != null) {
-                    // Hacky solution for #15 - after a double tap the GestureDetector gets in a state
-                    // where the next fling is ignored, so here we replace it with a new one.
-                    setGestureDetector(context);
                     if (quickScaleEnabled) {
                         // Store quick scale params. This will become either a double tap zoom or a
                         // quick scale depending on whether the user swipes.
@@ -2479,6 +2486,25 @@ public class SubsamplingScaleImageView extends View {
      */
     public final boolean isZoomEnabled() {
         return zoomEnabled;
+    }
+
+    /**
+     * Returns true if double-tap zoom and double-tap quick scale are enabled.
+     *
+     * @return true if double-tap gestures may change the image scale.
+     */
+    public final boolean isDoubleTapZoomEnabled() {
+        return doubleTapZoomEnabled;
+    }
+
+    /**
+     * Enable or disable double-tap zoom without disabling two-finger pinch zoom.
+     *
+     * @param doubleTapZoomEnabled true to enable double-tap zoom and quick scale, false to consume
+     *                             double taps without changing the image scale.
+     */
+    public final void setDoubleTapZoomEnabled(boolean doubleTapZoomEnabled) {
+        this.doubleTapZoomEnabled = doubleTapZoomEnabled;
     }
 
     /**
