@@ -98,9 +98,9 @@ class KohariaEnhancementPreferences(
         const val RENDER_WARMUP_MODE_FIXED = 0
         const val RENDER_WARMUP_MODE_ADAPTIVE = 1
         const val DEFAULT_RENDER_WARMUP_MODE = RENDER_WARMUP_MODE_ADAPTIVE
-        const val DEFAULT_RENDER_WARMUP_FORWARD = 3
+        const val DEFAULT_RENDER_WARMUP_FORWARD = 5
         const val DEFAULT_RENDER_WARMUP_BACKWARD = 1
-        const val DEFAULT_RENDER_WARMUP_CONCURRENCY = 2
+        const val DEFAULT_RENDER_WARMUP_CONCURRENCY = 5
         const val DEFAULT_ADAPTIVE_RENDER_FORWARD_STRENGTH_PERCENT = 100
         const val DEFAULT_ADAPTIVE_RENDER_BACKWARD_STRENGTH_PERCENT = 100
         const val DEFAULT_ADAPTIVE_RENDER_CONCURRENCY_STRENGTH_PERCENT = 100
@@ -128,11 +128,11 @@ class KohariaEnhancementPreferences(
             value.takeIf { it == RENDER_WARMUP_MODE_FIXED || it == RENDER_WARMUP_MODE_ADAPTIVE }
                 ?: DEFAULT_RENDER_WARMUP_MODE
 
-        fun normalizedRenderWarmupForward(value: Int): Int = value.coerceIn(1, 10)
+        fun normalizedRenderWarmupForward(value: Int): Int = value.coerceIn(1, 30)
 
-        fun normalizedRenderWarmupBackward(value: Int): Int = value.coerceIn(0, 3)
+        fun normalizedRenderWarmupBackward(value: Int): Int = value.coerceIn(0, 10)
 
-        fun normalizedRenderWarmupConcurrency(value: Int): Int = value.coerceIn(1, 10)
+        fun normalizedRenderWarmupConcurrency(value: Int): Int = value.coerceIn(1, 20)
 
         fun normalizedAdaptiveRenderStrengthPercent(value: Int): Int = value.coerceIn(10, 200)
 

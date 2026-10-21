@@ -214,23 +214,35 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
                 val concurrencyStrength = KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(
                     enhancementPreferences.adaptiveRenderConcurrencyStrengthPercent.get(),
                 )
-                val maxForward = KohariaEnhancementPreferences.normalizedAdaptiveRenderMaxForwardPages(
+                val baselineForward = KohariaEnhancementPreferences.normalizedRenderWarmupForward(
+                    enhancementPreferences.renderWarmupForwardPages.get(),
+                )
+                val baselineBackward = KohariaEnhancementPreferences.normalizedRenderWarmupBackward(
+                    enhancementPreferences.renderWarmupBackwardPages.get(),
+                )
+                val baselineConcurrency = KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(
+                    enhancementPreferences.renderWarmupConcurrency.get(),
+                )
+                val configuredMaxForward = KohariaEnhancementPreferences.normalizedAdaptiveRenderMaxForwardPages(
                     enhancementPreferences.adaptiveRenderMaxForwardPages.get(),
                 )
+                val maxForward = maxOf(configuredMaxForward, baselineForward)
 
                 val forwardCandidates = collect(forwardStep, maxForward)
                 val backwardCandidates = collect(
                     -forwardStep,
-                    RenderWarmupPolicy.adaptiveBackwardPageCap(backwardStrength),
+                    RenderWarmupPolicy.ADAPTIVE_BACKWARD_HARD_CAP,
                 )
                 val forwardCount = RenderWarmupPolicy.forwardSlotCount(
                     slotCosts = forwardCandidates.map(::renderWarmupCost),
                     strengthPercent = forwardStrength,
+                    baselineSlots = baselineForward,
                     maxSlots = maxForward,
                 )
                 val backwardCount = RenderWarmupPolicy.backwardSlotCount(
                     slotCosts = backwardCandidates.map(::renderWarmupCost),
                     strengthPercent = backwardStrength,
+                    baselineSlots = baselineBackward,
                 )
                 desiredForwardWarmSlots = forwardCandidates.take(forwardCount)
                 desiredBackwardWarmSlots = backwardCandidates.take(backwardCount)
@@ -242,6 +254,7 @@ class PagerViewerAdapter(private val viewer: PagerViewer) : ViewPagerAdapter() {
                         .take(RenderWarmupPolicy.CONCURRENCY_SAMPLE_PAGES)
                         .toList(),
                     strengthPercent = concurrencyStrength,
+                    baselineConcurrency = baselineConcurrency,
                 )
             }
         }

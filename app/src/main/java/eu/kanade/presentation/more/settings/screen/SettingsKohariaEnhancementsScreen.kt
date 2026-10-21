@@ -213,7 +213,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 preference = preferences.renderWarmupForwardPages,
                                 title = stringResource(MR.strings.pref_enhancement_render_warmup_forward),
                                 summary = stringResource(MR.strings.pref_enhancement_render_warmup_forward_summary),
-                                range = 1..10,
+                                range = 1..30,
                                 suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
                             )
                         },
@@ -225,7 +225,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 preference = preferences.renderWarmupBackwardPages,
                                 title = stringResource(MR.strings.pref_enhancement_render_warmup_backward),
                                 summary = stringResource(MR.strings.pref_enhancement_render_warmup_backward_summary),
-                                range = 0..3,
+                                range = 0..10,
                                 suffix = stringResource(MR.strings.pref_enhancement_pages_unit),
                             )
                         },
@@ -237,7 +237,7 @@ object SettingsKohariaEnhancementsScreen : SearchableSettings {
                                 preference = preferences.renderWarmupConcurrency,
                                 title = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency),
                                 summary = stringResource(MR.strings.pref_enhancement_render_warmup_concurrency_summary),
-                                range = 1..10,
+                                range = 1..20,
                                 suffix = "",
                             )
                         },

@@ -1,6 +1,6 @@
 package koharia.enhancement
 
-import kotlin.math.ceil
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -14,12 +14,12 @@ internal object RenderWarmupPolicy {
     )
 
     const val CONCURRENCY_SAMPLE_PAGES = 5
+    const val ADAPTIVE_CONCURRENCY_HARD_CAP = 20
+    const val ADAPTIVE_BACKWARD_HARD_CAP = 10
+
     private const val REFERENCE_SIZE_BYTES = 10L * 1024L * 1024L
-    private const val FORWARD_BUDGET_AT_100 = 5.0
-    private const val BACKWARD_BUDGET_AT_100 = 2.35
-    private const val BACKWARD_CAP_AT_100 = 5
-    private const val ADAPTIVE_CONCURRENCY_AT_10_MB = 5.0
-    private const val ADAPTIVE_CONCURRENCY_HARD_CAP = 20
+    private const val BACKWARD_BUDGET_AT_100_PER_BASELINE = 2.35
+    private const val BACKWARD_BONUS_CAP_AT_100_PER_BASELINE = 4
     private const val PIXEL_SAFETY_THRESHOLD = 24_000_000L
 
     fun pageCost(metrics: ImageMetrics): Double =
@@ -28,30 +28,63 @@ internal object RenderWarmupPolicy {
     fun forwardSlotCount(
         slotCosts: List<Double>,
         strengthPercent: Int,
+        baselineSlots: Int,
         maxSlots: Int,
     ): Int {
-        val budget = FORWARD_BUDGET_AT_100 * normalizedStrength(strengthPercent) / 100.0
-        return fitWithinBudget(slotCosts, budget, maxSlots.coerceAtLeast(0))
+        val safeMax = maxSlots.coerceAtLeast(0)
+        val baseline = baselineSlots.coerceIn(0, safeMax)
+        if (baseline == 0 || baseline == safeMax) return baseline
+
+        val targetAt100 = fitWithinBudget(
+            costs = slotCosts,
+            budget = baseline.toDouble(),
+            maxCount = safeMax,
+        ).coerceAtLeast(baseline)
+        return scaleBonus(
+            baseline = baseline,
+            targetAt100 = targetAt100,
+            strengthPercent = strengthPercent,
+            hardCap = safeMax,
+        )
     }
 
     fun backwardSlotCount(
         slotCosts: List<Double>,
         strengthPercent: Int,
+        baselineSlots: Int,
+        maxSlots: Int = ADAPTIVE_BACKWARD_HARD_CAP,
     ): Int {
-        val strength = normalizedStrength(strengthPercent)
-        val budget = BACKWARD_BUDGET_AT_100 * strength / 100.0
-        return fitWithinBudget(slotCosts, budget, adaptiveBackwardPageCap(strength))
-    }
+        val safeMax = maxSlots.coerceIn(0, ADAPTIVE_BACKWARD_HARD_CAP)
+        val baseline = baselineSlots.coerceIn(0, safeMax)
+        if (baseline == 0 || baseline == safeMax) return baseline
 
-    fun adaptiveBackwardPageCap(strengthPercent: Int): Int {
-        val strength = normalizedStrength(strengthPercent)
-        return ceil(BACKWARD_CAP_AT_100 * strength / 100.0).toInt().coerceAtLeast(1)
+        val nearestCost = slotCosts.firstOrNull()?.takeIf { it.isFinite() && it > 0.0 } ?: 1.0
+        if (nearestCost >= 1.0) return baseline
+
+        val targetCapAt100 = min(
+            safeMax,
+            baseline + BACKWARD_BONUS_CAP_AT_100_PER_BASELINE * baseline,
+        )
+        val targetAt100 = fitWithinBudget(
+            costs = slotCosts,
+            budget = BACKWARD_BUDGET_AT_100_PER_BASELINE * baseline,
+            maxCount = targetCapAt100,
+        ).coerceAtLeast(baseline)
+
+        return scaleBonus(
+            baseline = baseline,
+            targetAt100 = targetAt100,
+            strengthPercent = strengthPercent,
+            hardCap = safeMax,
+        )
     }
 
     fun adaptiveConcurrency(
         metrics: List<ImageMetrics>,
         strengthPercent: Int,
+        baselineConcurrency: Int,
     ): Int {
+        val baseline = baselineConcurrency.coerceIn(1, ADAPTIVE_CONCURRENCY_HARD_CAP)
         val sample = metrics.take(CONCURRENCY_SAMPLE_PAGES)
         val averageSize = if (sample.isEmpty()) {
             REFERENCE_SIZE_BYTES.toDouble()
@@ -59,11 +92,27 @@ internal object RenderWarmupPolicy {
             sample.map(::effectiveSizeBytes).average()
         }
         val sizeFactor = (REFERENCE_SIZE_BYTES / averageSize).pow(0.25)
-        val scaled = ADAPTIVE_CONCURRENCY_AT_10_MB *
-            sizeFactor *
-            normalizedStrength(strengthPercent) /
-            100.0
-        return scaled.roundToInt().coerceIn(1, ADAPTIVE_CONCURRENCY_HARD_CAP)
+        val targetAt100 = (baseline * sizeFactor)
+            .roundToInt()
+            .coerceIn(baseline, ADAPTIVE_CONCURRENCY_HARD_CAP)
+
+        return scaleBonus(
+            baseline = baseline,
+            targetAt100 = targetAt100,
+            strengthPercent = strengthPercent,
+            hardCap = ADAPTIVE_CONCURRENCY_HARD_CAP,
+        )
+    }
+
+    private fun scaleBonus(
+        baseline: Int,
+        targetAt100: Int,
+        strengthPercent: Int,
+        hardCap: Int,
+    ): Int {
+        val bonusAt100 = (targetAt100 - baseline).coerceAtLeast(0)
+        val scaledBonus = (bonusAt100 * normalizedStrength(strengthPercent) / 100.0).roundToInt()
+        return (baseline + scaledBonus).coerceIn(baseline, hardCap)
     }
 
     private fun fitWithinBudget(

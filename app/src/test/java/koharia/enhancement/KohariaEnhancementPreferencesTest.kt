@@ -14,9 +14,9 @@ class KohariaEnhancementPreferencesTest {
         preferences.komgaPrefetchNextPages.get() shouldBe 5
         preferences.komgaPrefetchPreviousPages.get() shouldBe 3
         preferences.renderWarmupMode.get() shouldBe KohariaEnhancementPreferences.RENDER_WARMUP_MODE_ADAPTIVE
-        preferences.renderWarmupForwardPages.get() shouldBe 3
+        preferences.renderWarmupForwardPages.get() shouldBe 5
         preferences.renderWarmupBackwardPages.get() shouldBe 1
-        preferences.renderWarmupConcurrency.get() shouldBe 2
+        preferences.renderWarmupConcurrency.get() shouldBe 5
         preferences.adaptiveRenderForwardStrengthPercent.get() shouldBe 100
         preferences.adaptiveRenderBackwardStrengthPercent.get() shouldBe 100
         preferences.adaptiveRenderConcurrencyStrengthPercent.get() shouldBe 100
@@ -40,11 +40,11 @@ class KohariaEnhancementPreferencesTest {
         KohariaEnhancementPreferences.normalizedRenderWarmupMode(-1) shouldBe
             KohariaEnhancementPreferences.RENDER_WARMUP_MODE_ADAPTIVE
         KohariaEnhancementPreferences.normalizedRenderWarmupForward(0) shouldBe 1
-        KohariaEnhancementPreferences.normalizedRenderWarmupForward(11) shouldBe 10
+        KohariaEnhancementPreferences.normalizedRenderWarmupForward(31) shouldBe 30
         KohariaEnhancementPreferences.normalizedRenderWarmupBackward(-1) shouldBe 0
-        KohariaEnhancementPreferences.normalizedRenderWarmupBackward(4) shouldBe 3
+        KohariaEnhancementPreferences.normalizedRenderWarmupBackward(11) shouldBe 10
         KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(0) shouldBe 1
-        KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(11) shouldBe 10
+        KohariaEnhancementPreferences.normalizedRenderWarmupConcurrency(21) shouldBe 20
         KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(9) shouldBe 10
         KohariaEnhancementPreferences.normalizedAdaptiveRenderStrengthPercent(201) shouldBe 200
         KohariaEnhancementPreferences.normalizedAdaptiveRenderMaxForwardPages(4) shouldBe 5
